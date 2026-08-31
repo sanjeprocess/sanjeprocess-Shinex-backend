@@ -1,0 +1,42 @@
+name: Deploy Shinex HRIS Backend to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Java 17 (Amazon Corretto)
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'corretto'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven
+
+      - name: Build JAR with Maven (skip tests)
+        run: mvn clean package -DskipTests
+
+      - name: Deploy to AWS Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: shinex-hris-backend
+          environment_name: shinex-hris-backend-env
+          region: ${{ secrets.AWS_REGION }}
+          version_label: v${{ github.run_number }}
+          deployment_package: target/shinex-hris-backend-0.0.1-SNAPSHOT.jar
+          wait_for_environment_recovery: 60
