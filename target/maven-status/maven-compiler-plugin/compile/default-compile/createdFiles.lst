@@ -1,4 +1,6 @@
+com\hsb\hris\config\JacksonConfig.class
 com\hsb\hris\entity\Bank.class
+com\hsb\hris\config\JacksonConfig$1.class
 com\hsb\hris\controller\master\LoanTypeController.class
 com\hsb\hris\entity\AttendanceSummary.class
 com\hsb\hris\repository\LeaveTypeRepository.class
@@ -26,6 +28,7 @@ com\hsb\hris\controller\transaction\TLoanController.class
 com\hsb\hris\controller\transaction\AttendanceController.class
 com\hsb\hris\repository\EmployeeRepository.class
 com\hsb\hris\entity\TLeave.class
+com\hsb\hris\repository\AuditLogRepository.class
 com\hsb\hris\repository\AdditionMasterRepository.class
 com\hsb\hris\controller\master\GenericMasterController.class
 com\hsb\hris\repository\SectionRepository.class
@@ -45,12 +48,15 @@ com\hsb\hris\dto\AuthDtos.class
 com\hsb\hris\entity\TLoan.class
 com\hsb\hris\dto\AuthDtos$LoginResponse.class
 com\hsb\hris\entity\OtType.class
+com\hsb\hris\ShinexHrisApplication$1.class
 com\hsb\hris\entity\id\TAdditionId.class
+com\hsb\hris\entity\AuditLog.class
 com\hsb\hris\service\transaction\AttendanceService.class
 com\hsb\hris\repository\LoanTypeRepository.class
 com\hsb\hris\security\JwtUtil.class
 com\hsb\hris\repository\PlantRepository.class
 com\hsb\hris\service\transaction\impl\AttendanceServiceImpl$1.class
+com\hsb\hris\controller\AuditLogController.class
 com\hsb\hris\entity\id\AttSummaryId.class
 com\hsb\hris\controller\master\OtTypeController.class
 com\hsb\hris\service\master\EmployeeService.class
@@ -59,6 +65,7 @@ com\hsb\hris\controller\master\EmployeeController.class
 com\hsb\hris\service\master\impl\BusinessCenterServiceImpl.class
 com\hsb\hris\entity\Section.class
 com\hsb\hris\service\master\impl\GenericMasterServiceImpl.class
+com\hsb\hris\config\JacksonConfig$2.class
 com\hsb\hris\controller\transaction\TDeductionController.class
 com\hsb\hris\entity\RateId.class
 com\hsb\hris\repository\RateIdRepository.class

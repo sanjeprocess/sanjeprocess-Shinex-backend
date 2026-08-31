@@ -9,8 +9,8 @@ public class TLeave {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private Long id; // Not in original schema (no PK defined); add a surrogate key via migration, or map without @Id if using a natural composite key instead.
+    @Column(name = "Leave_ID")
+    private Integer id;
 
     @Column(name = "Leave_Year", length = 4)
     private String leaveYear;
@@ -36,8 +36,8 @@ public class TLeave {
     @Column(name = "Business_Center", length = 100)
     private String businessCenter;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
     public String getLeaveYear() { return leaveYear; }
     public void setLeaveYear(String leaveYear) { this.leaveYear = leaveYear; }
     public String getLeaveMonth() { return leaveMonth; }

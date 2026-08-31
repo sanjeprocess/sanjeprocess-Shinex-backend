@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/master/employees")
+@RequestMapping({"/api/employees", "/api/master/employees"})
 public class EmployeeController {
 
     private final EmployeeService service;
@@ -19,6 +19,33 @@ public class EmployeeController {
     public List<Employee> list(@RequestParam(value = "businessCenter", required = false) String businessCenter) {
         if (businessCenter != null) return service.findByBusinessCenter(businessCenter);
         return service.findAll();
+    }
+
+    @GetMapping("/search")
+    public List<Employee> search(
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "section", required = false) String section,
+            @RequestParam(value = "plant", required = false) String plant) {
+        List<Employee> employees = service.findAll();
+        String q = name == null ? "" : name.trim().toLowerCase();
+        String sectionFilter = section == null ? "" : section.trim().toLowerCase();
+        String plantFilter = plant == null ? "" : plant.trim().toLowerCase();
+
+        return employees.stream().filter(e -> {
+            if (q != null && !q.isEmpty()) {
+                String fullName = ((e.getFirstName() == null ? "" : e.getFirstName()) + " " + (e.getLastName() == null ? "" : e.getLastName())).trim().toLowerCase();
+                if (!fullName.contains(q) && !(e.getEpfNo() != null && e.getEpfNo().toLowerCase().contains(q))) {
+                    return false;
+                }
+            }
+            if (!sectionFilter.isEmpty() && (e.getSectionCode() == null || !e.getSectionCode().toLowerCase().contains(sectionFilter))) {
+                return false;
+            }
+            if (!plantFilter.isEmpty() && (e.getPlantCode() == null || !e.getPlantCode().toLowerCase().contains(plantFilter))) {
+                return false;
+            }
+            return true;
+        }).toList();
     }
 
     @GetMapping("/{id}")

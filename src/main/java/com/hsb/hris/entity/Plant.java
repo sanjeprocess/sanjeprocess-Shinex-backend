@@ -2,6 +2,7 @@ package com.hsb.hris.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "TBL_M_Customer")
@@ -9,10 +10,22 @@ public class Plant {
 
     @Id
     @Column(name = "Cus_Code", length = 6, nullable = false)
+    @JsonProperty("custCode")
     private String custCode;
 
     @Column(name = "Cus_Name", length = 100)
+    @JsonProperty("custName")
     private String custName;
+
+    @JsonProperty("code")
+    public String getCode() { return custCode; }
+    @JsonProperty("code")
+    public void setCode(String code) { this.custCode = code; }
+
+    @JsonProperty("name")
+    public String getName() { return custName; }
+    @JsonProperty("name")
+    public void setName(String name) { this.custName = name; }
 
     @Column(name = "Cus_Add1", length = 50)
     private String address1;

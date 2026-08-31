@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/transaction/leaves")
-public class TLeaveController extends GenericMasterController<TLeave, Long> {
+@RequestMapping({"/api/leaves", "/api/transaction/leaves"})
+public class TLeaveController extends GenericMasterController<TLeave, Integer> {
     public TLeaveController(TLeaveRepository repo) { super(repo); }
 }

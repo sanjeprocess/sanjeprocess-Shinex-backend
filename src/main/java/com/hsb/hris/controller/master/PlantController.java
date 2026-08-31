@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/master/plants")
+@RequestMapping({"/api/customers", "/api/master/plants"})
 public class PlantController extends GenericMasterController<Plant, String> {
     public PlantController(PlantRepository repo) { super(repo); }
 }

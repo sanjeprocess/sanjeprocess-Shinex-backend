@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/master/deductions")
+@RequestMapping({"/api/deduction-types", "/api/master/deductions"})
 public class DeductionMasterController extends GenericMasterController<DeductionMaster, String> {
     public DeductionMasterController(DeductionMasterRepository repo) { super(repo); }
 }

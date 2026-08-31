@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface TLeaveRepository extends JpaRepository<TLeave, Long> {
+public interface TLeaveRepository extends JpaRepository<TLeave, Integer> {
 }

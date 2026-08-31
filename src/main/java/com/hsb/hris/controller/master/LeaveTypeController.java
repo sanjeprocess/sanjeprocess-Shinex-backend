@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/master/leave-types")
+@RequestMapping({"/api/leave-types", "/api/master/leave-types"})
 public class LeaveTypeController extends GenericMasterController<LeaveType, String> {
     public LeaveTypeController(LeaveTypeRepository repo) { super(repo); }
 }

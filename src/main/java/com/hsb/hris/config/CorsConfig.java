@@ -14,10 +14,11 @@ public class CorsConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration cc = new CorsConfiguration();
-        cc.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:3000"));
+        cc.setAllowedOriginPatterns(Arrays.asList("*"));
         cc.setAllowedHeaders(Arrays.asList("*"));
-        cc.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
+        cc.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         cc.setAllowCredentials(true);
+        cc.setExposedHeaders(Arrays.asList("Authorization"));
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/api/**", cc);
         src.registerCorsConfiguration("/swagger-ui/**", cc);

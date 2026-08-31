@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/master/additions")
+@RequestMapping({"/api/addition-types", "/api/master/additions"})
 public class AdditionMasterController extends GenericMasterController<AdditionMaster, String> {
     public AdditionMasterController(AdditionMasterRepository repo) { super(repo); }
 }

@@ -1,0 +1,116 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------< com.hsb:shinex-hris-backend >---------------------
+[INFO] Building shinex-hris-backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.2.0:run (default-cli) > test-compile @ shinex-hris-backend >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ shinex-hris-backend ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ shinex-hris-backend ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ shinex-hris-backend ---
+[INFO] skip non existing resourceDirectory C:\Users\TharinduChathuranga\Desktop\Shinex\Backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ shinex-hris-backend ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] <<< spring-boot:3.2.0:run (default-cli) < test-compile @ shinex-hris-backend <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.2.0:run (default-cli) @ shinex-hris-backend ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.0)
+
+2026-08-31T10:08:03.529+05:30  INFO 21992 --- [           main] com.hsb.hris.ShinexHrisApplication       : Starting ShinexHrisApplication using Java 21.0.12 with PID 21992 (C:\Users\TharinduChathuranga\Desktop\Shinex\Backend\target\classes started by TharinduChathuranga in C:\Users\TharinduChathuranga\Desktop\Shinex\Backend)
+2026-08-31T10:08:03.536+05:30  INFO 21992 --- [           main] com.hsb.hris.ShinexHrisApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-08-31T10:08:05.005+05:30  INFO 21992 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-08-31T10:08:05.189+05:30  INFO 21992 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 181 ms. Found 19 JPA repository interfaces.
+2026-08-31T10:08:06.122+05:30  INFO 21992 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-08-31T10:08:06.131+05:30  INFO 21992 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-08-31T10:08:06.131+05:30  INFO 21992 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.16]
+2026-08-31T10:08:06.242+05:30  INFO 21992 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-08-31T10:08:06.242+05:30  INFO 21992 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2556 ms
+2026-08-31T10:08:06.681+05:30  INFO 21992 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-08-31T10:08:06.783+05:30  INFO 21992 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.3.1.Final
+2026-08-31T10:08:06.862+05:30  INFO 21992 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-08-31T10:08:07.307+05:30  INFO 21992 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-08-31T10:08:07.351+05:30  INFO 21992 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-08-31T10:08:08.142+05:30  INFO 21992 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection ConnectionID:1 ClientConnectionId: bd23fc72-990e-48bd-be7b-5cad63b1124a
+2026-08-31T10:08:08.146+05:30  INFO 21992 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-08-31T10:08:08.199+05:30  WARN 21992 --- [           main] org.hibernate.orm.deprecation            : HHH90000025: SQLServerDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-08-31T10:08:12.249+05:30  INFO 21992 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-08-31T10:08:12.254+05:30  INFO 21992 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-08-31T10:08:13.924+05:30  WARN 21992 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-08-31T10:08:13.975+05:30  WARN 21992 --- [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 2d49fe66-cc1c-4a3e-8ff9-16c33e92c820
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-08-31T10:08:14.512+05:30  INFO 21992 --- [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@2da3d7d3, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@1f832df0, org.springframework.security.web.context.SecurityContextHolderFilter@533165e7, org.springframework.security.web.header.HeaderWriterFilter@58d635de, org.springframework.web.filter.CorsFilter@3e3cd6fe, org.springframework.security.web.authentication.logout.LogoutFilter@42365c82, com.hsb.hris.security.JwtAuthenticationFilter@79d3473e, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@1018552d, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@75eca6d8, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@47184859, org.springframework.security.web.session.SessionManagementFilter@690113f0, org.springframework.security.web.access.ExceptionTranslationFilter@5120886f, org.springframework.security.web.access.intercept.AuthorizationFilter@5f7dbdfa]
+2026-08-31T10:08:15.191+05:30  INFO 21992 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-08-31T10:08:15.207+05:30  INFO 21992 --- [           main] com.hsb.hris.ShinexHrisApplication       : Started ShinexHrisApplication in 12.453 seconds (process running for 13.394)
+2026-08-31T10:09:04.275+05:30  INFO 21992 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-08-31T10:09:04.275+05:30  INFO 21992 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-08-31T10:09:04.290+05:30  INFO 21992 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2026-08-31T10:09:04.307+05:30  WARN 21992 --- [nio-8080-exec-1] o.s.w.s.h.HandlerMappingIntrospector     : Cache miss for REQUEST dispatch to '/api/attendance' (previous null). Performing MatchableHandlerMapping lookup. This is logged once only at WARN level, and every time at TRACE.
+Hibernate: select a1_0.att_month,a1_0.attt_year,a1_0.day_in,a1_0.epf_no,a1_0.att_allowance,a1_0.basic_salary,a1_0.business_center,a1_0.day_allowance,a1_0.day_out,a1_0.day_shift,a1_0.das_for_att_alowance,a1_0.full_night,a1_0.half_day,a1_0.late_allow_no,a1_0.night_allowance,a1_0.night_shift,a1_0.no_of_meal,a1_0.no_of_staff,a1_0.normal_day,a1_0.ot_cal_auto,a1_0.plant_code,a1_0.poya_saturday_normal,a1_0.saturday_poya,a1_0.second_shift,a1_0.special_day,a1_0.statutory_holidays,a1_0.sunday_poya_extra,a1_0.time_in,a1_0.time_out,a1_0.total_meal_value,a1_0.total_ot,a1_0.total_working_hours,a1_0.working_days from dbo.tbl_t_attendance a1_0 where ((a1_0.att_month=? and a1_0.attt_year=? and a1_0.day_in=? and a1_0.epf_no=?))
+Hibernate: insert into dbo.tbl_t_attendance (att_allowance,basic_salary,business_center,day_allowance,day_out,day_shift,das_for_att_alowance,full_night,half_day,late_allow_no,night_allowance,night_shift,no_of_meal,no_of_staff,normal_day,ot_cal_auto,plant_code,poya_saturday_normal,saturday_poya,second_shift,special_day,statutory_holidays,sunday_poya_extra,time_in,time_out,total_meal_value,total_ot,total_working_hours,working_days,att_month,attt_year,day_in,epf_no) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+Hibernate: select a1_0.att_month,a1_0.attt_year,a1_0.day_in,a1_0.epf_no,a1_0.att_allowance,a1_0.basic_salary,a1_0.business_center,a1_0.day_allowance,a1_0.day_out,a1_0.day_shift,a1_0.das_for_att_alowance,a1_0.full_night,a1_0.half_day,a1_0.late_allow_no,a1_0.night_allowance,a1_0.night_shift,a1_0.no_of_meal,a1_0.no_of_staff,a1_0.normal_day,a1_0.ot_cal_auto,a1_0.plant_code,a1_0.poya_saturday_normal,a1_0.saturday_poya,a1_0.second_shift,a1_0.special_day,a1_0.statutory_holidays,a1_0.sunday_poya_extra,a1_0.time_in,a1_0.time_out,a1_0.total_meal_value,a1_0.total_ot,a1_0.total_working_hours,a1_0.working_days from dbo.tbl_t_attendance a1_0 where ((a1_0.att_month=? and a1_0.attt_year=? and a1_0.day_in=? and a1_0.epf_no=?))
+Hibernate: select a1_0.att_month,a1_0.attt_year,a1_0.day_in,a1_0.epf_no,a1_0.att_allowance,a1_0.basic_salary,a1_0.business_center,a1_0.day_allowance,a1_0.day_out,a1_0.day_shift,a1_0.das_for_att_alowance,a1_0.full_night,a1_0.half_day,a1_0.late_allow_no,a1_0.night_allowance,a1_0.night_shift,a1_0.no_of_meal,a1_0.no_of_staff,a1_0.normal_day,a1_0.ot_cal_auto,a1_0.plant_code,a1_0.poya_saturday_normal,a1_0.saturday_poya,a1_0.second_shift,a1_0.special_day,a1_0.statutory_holidays,a1_0.sunday_poya_extra,a1_0.time_in,a1_0.time_out,a1_0.total_meal_value,a1_0.total_ot,a1_0.total_working_hours,a1_0.working_days from dbo.tbl_t_attendance a1_0 where ((a1_0.att_month=? and a1_0.attt_year=? and a1_0.day_in=? and a1_0.epf_no=?))
+Hibernate: update dbo.tbl_t_attendance set att_allowance=?,basic_salary=?,business_center=?,day_allowance=?,day_out=?,day_shift=?,das_for_att_alowance=?,full_night=?,half_day=?,late_allow_no=?,night_allowance=?,night_shift=?,no_of_meal=?,no_of_staff=?,normal_day=?,ot_cal_auto=?,plant_code=?,poya_saturday_normal=?,saturday_poya=?,second_shift=?,special_day=?,statutory_holidays=?,sunday_poya_extra=?,time_in=?,time_out=?,total_meal_value=?,total_ot=?,total_working_hours=?,working_days=? where att_month=? and attt_year=? and day_in=? and epf_no=?
+Hibernate: select count_big(*) from dbo.tbl_t_attendance a1_0 where a1_0.day_in=? and a1_0.attt_year=? and a1_0.epf_no=? and a1_0.att_month=?
+Hibernate: select a1_0.att_month,a1_0.attt_year,a1_0.day_in,a1_0.epf_no,a1_0.att_allowance,a1_0.basic_salary,a1_0.business_center,a1_0.day_allowance,a1_0.day_out,a1_0.day_shift,a1_0.das_for_att_alowance,a1_0.full_night,a1_0.half_day,a1_0.late_allow_no,a1_0.night_allowance,a1_0.night_shift,a1_0.no_of_meal,a1_0.no_of_staff,a1_0.normal_day,a1_0.ot_cal_auto,a1_0.plant_code,a1_0.poya_saturday_normal,a1_0.saturday_poya,a1_0.second_shift,a1_0.special_day,a1_0.statutory_holidays,a1_0.sunday_poya_extra,a1_0.time_in,a1_0.time_out,a1_0.total_meal_value,a1_0.total_ot,a1_0.total_working_hours,a1_0.working_days from dbo.tbl_t_attendance a1_0 where ((a1_0.att_month=? and a1_0.attt_year=? and a1_0.day_in=? and a1_0.epf_no=?))
+Hibernate: delete from dbo.tbl_t_attendance where att_month=? and attt_year=? and day_in=? and epf_no=?
+Hibernate: select t1_0.add_code,t1_0.epf_no,t1_0.add_amount,t1_0.add_month,t1_0.add_year,t1_0.business_center,t1_0.every_month from dbo.tbl_t_addition t1_0 where ((t1_0.add_code=? and t1_0.epf_no=?))
+Hibernate: insert into dbo.tbl_t_addition (add_amount,add_month,add_year,business_center,every_month,add_code,epf_no) values (?,?,?,?,?,?,?)
+Hibernate: select t1_0.add_code,t1_0.epf_no,t1_0.add_amount,t1_0.add_month,t1_0.add_year,t1_0.business_center,t1_0.every_month from dbo.tbl_t_addition t1_0 where ((t1_0.add_code=? and t1_0.epf_no=?))
+Hibernate: select t1_0.add_code,t1_0.epf_no,t1_0.add_amount,t1_0.add_month,t1_0.add_year,t1_0.business_center,t1_0.every_month from dbo.tbl_t_addition t1_0 where ((t1_0.add_code=? and t1_0.epf_no=?))
+Hibernate: update dbo.tbl_t_addition set add_amount=?,add_month=?,add_year=?,business_center=?,every_month=? where add_code=? and epf_no=?
+Hibernate: select count_big(*) from dbo.tbl_t_addition t1_0 where t1_0.epf_no=? and t1_0.add_code=?
+Hibernate: select t1_0.add_code,t1_0.epf_no,t1_0.add_amount,t1_0.add_month,t1_0.add_year,t1_0.business_center,t1_0.every_month from dbo.tbl_t_addition t1_0 where ((t1_0.add_code=? and t1_0.epf_no=?))
+Hibernate: delete from dbo.tbl_t_addition where add_code=? and epf_no=?
+Hibernate: select t1_0.did_code,t1_0.epf_no,t1_0.add_month,t1_0.add_year,t1_0.business_center,t1_0.did_amount,t1_0.every_month from dbo.tbl_t_diduction t1_0 where ((t1_0.did_code=? and t1_0.epf_no=?))
+Hibernate: insert into dbo.tbl_t_diduction (add_month,add_year,business_center,did_amount,every_month,did_code,epf_no) values (?,?,?,?,?,?,?)
+Hibernate: select t1_0.did_code,t1_0.epf_no,t1_0.add_month,t1_0.add_year,t1_0.business_center,t1_0.did_amount,t1_0.every_month from dbo.tbl_t_diduction t1_0 where ((t1_0.did_code=? and t1_0.epf_no=?))
+Hibernate: select t1_0.did_code,t1_0.epf_no,t1_0.add_month,t1_0.add_year,t1_0.business_center,t1_0.did_amount,t1_0.every_month from dbo.tbl_t_diduction t1_0 where ((t1_0.did_code=? and t1_0.epf_no=?))
+Hibernate: update dbo.tbl_t_diduction set add_month=?,add_year=?,business_center=?,did_amount=?,every_month=? where did_code=? and epf_no=?
+Hibernate: select count_big(*) from dbo.tbl_t_diduction t1_0 where t1_0.epf_no=? and t1_0.did_code=?
+Hibernate: select t1_0.did_code,t1_0.epf_no,t1_0.add_month,t1_0.add_year,t1_0.business_center,t1_0.did_amount,t1_0.every_month from dbo.tbl_t_diduction t1_0 where ((t1_0.did_code=? and t1_0.epf_no=?))
+Hibernate: delete from dbo.tbl_t_diduction where did_code=? and epf_no=?
+Hibernate: insert into dbo.tbl_t_leave (business_center,emp_no,leave_days,leave_end_date,leave_month,leave_start_date,leave_type,leave_year) values (?,?,?,?,?,?,?,?)
+Hibernate: select t1_0.leave_id,t1_0.business_center,t1_0.emp_no,t1_0.leave_days,t1_0.leave_end_date,t1_0.leave_month,t1_0.leave_start_date,t1_0.leave_type,t1_0.leave_year from dbo.tbl_t_leave t1_0 where t1_0.leave_id=?
+Hibernate: select count_big(*) from dbo.tbl_t_leave t1_0 where t1_0.leave_id=?
+Hibernate: select t1_0.leave_id,t1_0.business_center,t1_0.emp_no,t1_0.leave_days,t1_0.leave_end_date,t1_0.leave_month,t1_0.leave_start_date,t1_0.leave_type,t1_0.leave_year from dbo.tbl_t_leave t1_0 where t1_0.leave_id=?
+Hibernate: update dbo.tbl_t_leave set business_center=?,emp_no=?,leave_days=?,leave_end_date=?,leave_month=?,leave_start_date=?,leave_type=?,leave_year=? where leave_id=?
+Hibernate: select t1_0.leave_id,t1_0.business_center,t1_0.emp_no,t1_0.leave_days,t1_0.leave_end_date,t1_0.leave_month,t1_0.leave_start_date,t1_0.leave_type,t1_0.leave_year from dbo.tbl_t_leave t1_0 where t1_0.leave_id=?
+Hibernate: delete from dbo.tbl_t_leave where leave_id=?
+Hibernate: select e1_0.emp_epf_no,e1_0.emp_address,e1_0.emp_b_card_yes,e1_0.emp_bank_account_number,e1_0.emp_bank_branch_name,e1_0.emp_bank_name,e1_0.emp_basic_salary,e1_0.emp_business_center,e1_0.emp_contact_no,e1_0.emp_date_of_birth,e1_0.emp_day_allowance,e1_0.emp_deth_denotion,e1_0.emp_email_address,e1_0.emp_enative_yes,e1_0.emp_name,e1_0.emp_gender,e1_0.emp_hired_date,e1_0.emp_hired_month,e1_0.emp_nam1,e1_0.emp_mobile_no,e1_0.emp_nic_no,e1_0.emp_night_allowance,e1_0.emp_plant_code,e1_0.emp_section_code,e1_0.sunday_poya_extra,e1_0.emp_swift from dbo.tbl_emp_master e1_0
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  20:48 min
+[INFO] Finished at: 2026-08-31T10:28:45+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.2.0:run (default-cli) on project shinex-hris-backend: Process terminated with exit code: 1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
+
+C:\Users\TharinduChathuranga\Desktop\Shinex>
