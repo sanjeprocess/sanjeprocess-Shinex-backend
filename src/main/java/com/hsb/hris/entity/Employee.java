@@ -1,6 +1,7 @@
 package com.hsb.hris.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 
 @Entity
@@ -71,14 +72,14 @@ public class Employee {
     @Column(name = "Emp_Night_Allowance")
     private Double nightAllowance;
 
-    @Column(name = "Emp_B_Card_Yes", length = 3)
-    private String bCardYes;
+    @Column(name = "Emp_B_Card_Yes")
+    private Boolean bCardYes;
 
-    @Column(name = "Emp_Enative_Yes", length = 3)
-    private String enativeYes;
+    @Column(name = "Emp_Enative_Yes")
+    private Boolean enativeYes;
 
-    @Column(name = "Emp_Deth_Denotion", length = 3)
-    private String dethDenotion;
+    @Column(name = "Emp_Deth_Denotion")
+    private Boolean dethDenotion;
 
     @Column(name = "Emp_Business_Center", length = 100)
     private String businessCenter;
@@ -128,12 +129,14 @@ public class Employee {
     public void setDayAllowance(Double dayAllowance) { this.dayAllowance = dayAllowance; }
     public Double getNightAllowance() { return nightAllowance; }
     public void setNightAllowance(Double nightAllowance) { this.nightAllowance = nightAllowance; }
-    public String getbCardYes() { return bCardYes; }
-    public void setbCardYes(String bCardYes) { this.bCardYes = bCardYes; }
-    public String getEnativeYes() { return enativeYes; }
-    public void setEnativeYes(String enativeYes) { this.enativeYes = enativeYes; }
-    public String getDethDenotion() { return dethDenotion; }
-    public void setDethDenotion(String dethDenotion) { this.dethDenotion = dethDenotion; }
+    public Boolean getbCardYes() { return bCardYes; }
+    public void setbCardYes(Boolean bCardYes) { this.bCardYes = bCardYes; }
+    public Boolean getEnativeYes() { return enativeYes; }
+    public void setEnativeYes(Boolean enativeYes) { this.enativeYes = enativeYes; }
+    @JsonProperty("deathDonation")
+    public Boolean getDethDenotion() { return dethDenotion; }
+    @JsonProperty("deathDonation")
+    public void setDethDenotion(Boolean dethDenotion) { this.dethDenotion = dethDenotion; }
     public String getBusinessCenter() { return businessCenter; }
     public void setBusinessCenter(String businessCenter) { this.businessCenter = businessCenter; }
     public Double getSundayPoyaExtra() { return sundayPoyaExtra; }

@@ -38,20 +38,26 @@ public class TLeave {
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
-    public String getLeaveYear() { return leaveYear; }
-    public void setLeaveYear(String leaveYear) { this.leaveYear = leaveYear; }
-    public String getLeaveMonth() { return leaveMonth; }
-    public void setLeaveMonth(String leaveMonth) { this.leaveMonth = leaveMonth; }
-    public String getEmpNo() { return empNo; }
-    public void setEmpNo(String empNo) { this.empNo = empNo; }
-    public String getLeaveType() { return leaveType; }
-    public void setLeaveType(String leaveType) { this.leaveType = leaveType; }
+    public String getLeaveYear() { return leaveYear == null ? null : leaveYear.trim(); }
+    public void setLeaveYear(String leaveYear) { this.leaveYear = trimToLength(leaveYear, 4); }
+    public String getLeaveMonth() { return leaveMonth == null ? null : leaveMonth.trim(); }
+    public void setLeaveMonth(String leaveMonth) { this.leaveMonth = trimToLength(leaveMonth, 2); }
+    public String getEmpNo() { return empNo == null ? null : empNo.trim(); }
+    public void setEmpNo(String empNo) { this.empNo = trimToLength(empNo, 10); }
+    public String getLeaveType() { return leaveType == null ? null : leaveType.trim(); }
+    public void setLeaveType(String leaveType) { this.leaveType = trimToLength(leaveType, 3); }
     public Double getLeaveDays() { return leaveDays; }
     public void setLeaveDays(Double leaveDays) { this.leaveDays = leaveDays; }
     public LocalDate getLeaveStartDate() { return leaveStartDate; }
     public void setLeaveStartDate(LocalDate leaveStartDate) { this.leaveStartDate = leaveStartDate; }
     public LocalDate getLeaveEndDate() { return leaveEndDate; }
     public void setLeaveEndDate(LocalDate leaveEndDate) { this.leaveEndDate = leaveEndDate; }
-    public String getBusinessCenter() { return businessCenter; }
-    public void setBusinessCenter(String businessCenter) { this.businessCenter = businessCenter; }
+    public String getBusinessCenter() { return businessCenter == null ? null : businessCenter.trim(); }
+    public void setBusinessCenter(String businessCenter) { this.businessCenter = trimToLength(businessCenter, 100); }
+
+    private String trimToLength(String value, int length) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.substring(0, Math.min(trimmed.length(), length));
+    }
 }

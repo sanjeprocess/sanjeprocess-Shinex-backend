@@ -2,12 +2,15 @@ package com.hsb.hris.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 public class SecurityConfig {
@@ -20,22 +23,31 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.cors().and().csrf().disable()
-                .authorizeHttpRequests()
-                .requestMatchers("/api/**", "/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+        http
+            .cors(cors -> cors.configure(http))
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    AntPathRequestMatcher.antMatcher("/"),
+                    AntPathRequestMatcher.antMatcher("/error"),
+                    AntPathRequestMatcher.antMatcher("/api/auth/**"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/business-centers"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/master/business-centers"),
+                    AntPathRequestMatcher.antMatcher("/actuator/**"),
+                    AntPathRequestMatcher.antMatcher("/v3/api-docs/**"),
+                    AntPathRequestMatcher.antMatcher("/swagger-ui/**"),
+                    AntPathRequestMatcher.antMatcher("/swagger-ui.html")
+                ).permitAll()
                 .anyRequest().authenticated()
-                .and()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        // Add JWT filter
-        http.addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
-        // NOTE: This is a minimal configuration. For production, tighten security and rotate keys.
         return http.build();
     }
 
     @Bean
-    public static NoOpPasswordEncoder passwordEncoder() {
-        // Legacy DB stores short plain passwords — replace with BCrypt in migration.
-        return (NoOpPasswordEncoder) NoOpPasswordEncoder.getInstance();
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

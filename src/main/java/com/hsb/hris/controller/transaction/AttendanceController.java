@@ -3,9 +3,12 @@ package com.hsb.hris.controller.transaction;
 import com.hsb.hris.entity.Attendance;
 import com.hsb.hris.repository.AttendanceRepository;
 import com.hsb.hris.service.transaction.AttendanceService;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -43,7 +46,14 @@ public class AttendanceController {
 
     @PostMapping
     public Attendance create(@RequestBody Attendance attendance) {
-        return attendanceRepository.save(attendance);
+        try {
+            return attendanceRepository.save(attendance);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Attendance already exists for this employee and date."
+            );
+        }
     }
 
     @GetMapping("/{year}/{month}/{epfNo}/{dayIn}")
@@ -62,7 +72,7 @@ public class AttendanceController {
                                            @PathVariable String epfNo,
                                            @PathVariable LocalDate dayIn,
                                            @RequestBody Attendance attendance) {
-        com.hsb.hris.entity.id.AttendanceId id = new com.hsb.hris.entity.id.AttendanceId(year, month, epfNo, dayIn);
+        com.hsb.hris.entity.id.AttendanceId id = new com.hsb.hris.entity.id.AttendanceId(year.trim(), month.trim(), epfNo.trim(), dayIn);
         return attendanceRepository.findById(id).map(existing -> {
             existing.setPlantCode(attendance.getPlantCode());
             existing.setWorkingDays(attendance.getWorkingDays());
@@ -131,6 +141,14 @@ public class AttendanceController {
                                                      @RequestParam(value = "businessCenter", required = false) String businessCenter) throws Exception {
         Map<String, Object> res = service.uploadExcel(file, businessCenter);
         return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Attendance>> bulkSave(@RequestBody List<Attendance> records) {
+        if (records == null || records.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(attendanceRepository.saveAll(records));
     }
 
     @PostMapping("/auto-update")

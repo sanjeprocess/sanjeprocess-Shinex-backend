@@ -14,7 +14,7 @@ public class TDeductionController extends GenericMasterController<TDeduction, TD
 
     @GetMapping("/{epfNo}/{didCode}")
     public ResponseEntity<TDeduction> get(@PathVariable String epfNo, @PathVariable String didCode) {
-        TDeductionId id = new TDeductionId(epfNo, didCode);
+        TDeductionId id = new TDeductionId(epfNo.trim(), didCode.trim());
         return repo.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 

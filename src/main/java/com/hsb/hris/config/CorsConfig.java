@@ -20,6 +20,7 @@ public class CorsConfig {
         cc.setAllowCredentials(true);
         cc.setExposedHeaders(Arrays.asList("Authorization"));
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/**", cc);
         src.registerCorsConfiguration("/api/**", cc);
         src.registerCorsConfiguration("/swagger-ui/**", cc);
         src.registerCorsConfiguration("/v3/api-docs/**", cc);

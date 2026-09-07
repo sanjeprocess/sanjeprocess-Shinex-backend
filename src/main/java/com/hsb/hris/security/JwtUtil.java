@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Map;
 
 @Component
 public class JwtUtil {
@@ -24,7 +25,6 @@ public class JwtUtil {
     @PostConstruct
     public void init() {
         // Ensure the secret is at least 32 bytes for HS256. If shorter, repeat/pad the secret.
-        // In production, provide a secure random 32+ byte secret via JWT_SECRET env var.
         byte[] keyBytes = secret == null ? new byte[32] : secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             byte[] padded = new byte[32];
@@ -37,10 +37,15 @@ public class JwtUtil {
     }
 
     public String generateToken(String username) {
+        return generateToken(username, "ADMIN");
+    }
+
+    public String generateToken(String username, String role) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
                 .subject(username)
+                .claims(Map.of("role", role != null ? role : "ADMIN"))
                 .issuedAt(now)
                 .expiration(exp)
                 .signWith(key)
@@ -59,5 +64,15 @@ public class JwtUtil {
     public String getUsername(String token) {
         Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
         return claims.getSubject();
+    }
+
+    public String getRole(String token) {
+        try {
+            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            Object role = claims.get("role");
+            return role != null ? role.toString() : "ADMIN";
+        } catch (Exception e) {
+            return "ADMIN";
+        }
     }
 }

@@ -13,10 +13,16 @@ public class AuthController {
 
     public AuthController(AuthService authService) { this.authService = authService; }
 
-    @PostMapping("/login")
+    @PostMapping(value = {"/login", "/login/"}, consumes = "application/json")
     public ResponseEntity<AuthDtos.LoginResponse> login(@RequestBody AuthDtos.LoginRequest req) {
+        if (req == null || req.loginName == null || req.loginName.trim().isEmpty()
+                || req.password == null || req.password.isEmpty()) {
+            AuthDtos.LoginResponse response = new AuthDtos.LoginResponse();
+            response.message = "Username and password are required";
+            return ResponseEntity.badRequest().body(response);
+        }
         AuthDtos.LoginResponse resp = authService.login(req);
-        if (resp.token == null) return ResponseEntity.status(401).build();
+        if (resp.token == null) return ResponseEntity.status(401).body(resp);
         return ResponseEntity.ok(resp);
     }
 }

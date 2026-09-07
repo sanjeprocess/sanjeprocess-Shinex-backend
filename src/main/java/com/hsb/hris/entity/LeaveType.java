@@ -13,8 +13,12 @@ public class LeaveType {
     @Column(name = "Leave_Name", length = 50)
     private String leaveName;
 
-    public String getLeaveType() { return leaveType; }
-    public void setLeaveType(String leaveType) { this.leaveType = leaveType; }
-    public String getLeaveName() { return leaveName; }
-    public void setLeaveName(String leaveName) { this.leaveName = leaveName; }
+    public String getLeaveType() { return leaveType == null ? null : leaveType.trim(); }
+    public void setLeaveType(String leaveType) { this.leaveType = trim(leaveType); }
+    public String getLeaveName() { return leaveName == null ? null : leaveName.trim(); }
+    public void setLeaveName(String leaveName) { this.leaveName = trim(leaveName); }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
+    }
 }

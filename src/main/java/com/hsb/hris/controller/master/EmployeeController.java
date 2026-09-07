@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @RestController
 @RequestMapping({"/api/employees", "/api/master/employees"})
@@ -54,7 +56,46 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public Employee create(@RequestBody Employee e) { return service.save(e); }
+    public ResponseEntity<?> create(@RequestBody Employee e) {
+        try {
+            normalize(e);
+            if (e.getDateOfBirth() == null || e.getHiredDate() == null || e.getHiredMonth() == null || e.getHiredMonth().isBlank()) {
+                return ResponseEntity.badRequest().body("Date of birth, hired date, and hired month are required");
+            }
+            return ResponseEntity.ok(service.save(e));
+        } catch (DataIntegrityViolationException ex) {
+            System.err.println("Employee database constraint failed");
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(rootMessage(ex));
+        } catch (Exception ex) {
+            System.err.println("Failed to create employee");
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(rootMessage(ex));
+        }
+    }
+
+    private void normalize(Employee e) {
+        e.setEpfNo(trim(e.getEpfNo(), 10));
+        e.setPlantCode(code(e.getPlantCode()));
+        e.setBusinessCenter(code(e.getBusinessCenter()));
+        e.setHiredMonth(trim(e.getHiredMonth(), 15));
+    }
+
+    private String code(String value) {
+        return value == null ? null : value.split(" / ", 2)[0].trim();
+    }
+
+    private String trim(String value, int max) {
+        if (value == null) return null;
+        String normalized = value.trim();
+        return normalized.substring(0, Math.min(max, normalized.length()));
+    }
+
+    private String rootMessage(Throwable error) {
+        Throwable cause = error;
+        while (cause.getCause() != null) cause = cause.getCause();
+        return cause.getMessage() == null ? error.getClass().getSimpleName() : cause.getMessage();
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<Employee> update(@PathVariable String id, @RequestBody Employee e) {
@@ -66,7 +107,7 @@ public class EmployeeController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        service.deleteById(id);
+        service.deleteById(id.trim());
         return ResponseEntity.noContent().build();
     }
 }

@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/master/bcards")
+@RequestMapping({"/api/bcards", "/api/master/bcards"})
 public class BCardController extends GenericMasterController<BCard, String> {
     public BCardController(BCardRepository repo) { super(repo); }
 }

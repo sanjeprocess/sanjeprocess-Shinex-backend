@@ -14,7 +14,7 @@ public class TAdditionController extends GenericMasterController<TAddition, TAdd
 
     @GetMapping("/{epfNo}/{addCode}")
     public ResponseEntity<TAddition> get(@PathVariable String epfNo, @PathVariable String addCode) {
-        TAdditionId id = new TAdditionId(epfNo, addCode);
+        TAdditionId id = new TAdditionId(epfNo.trim(), addCode.trim());
         return repo.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 

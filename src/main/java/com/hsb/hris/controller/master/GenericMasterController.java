@@ -38,7 +38,13 @@ public abstract class GenericMasterController<T, ID> {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable ID id) {
-        repo.deleteById(id);
+        repo.deleteById(normalizeId(id));
         return ResponseEntity.noContent().build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private ID normalizeId(ID id) {
+        if (id instanceof String value) return (ID) value.trim();
+        return id;
     }
 }
