@@ -112,7 +112,14 @@ public class AuthServiceImpl implements AuthService {
 
             // Validate password against hash or plain text
             String storedPassword = user.getPassword() == null ? "" : user.getPassword().trim();
+            
+            System.out.println("[AUTH-DEBUG] raw input password: [" + password + "]");
+            System.out.println("[AUTH-DEBUG] stored hash: [" + storedPassword + "] len=" + storedPassword.length());
+            
             boolean validPassword = passwordEncoder.matches(password, storedPassword);
+            
+            System.out.println("[AUTH-DEBUG] passwordEncoder.matches result: " + validPassword);
+
             if (!validPassword && storedPassword.equals(password)) {
                 try {
                     user.setPassword(passwordEncoder.encode(password));
