@@ -28,5 +28,10 @@ public class EmployeeServiceImpl implements EmployeeService {
     public void deleteById(String id) { repo.deleteById(id); }
 
     @Override
-    public List<Employee> findByBusinessCenter(String bc) { return repo.findByBusinessCenter(bc); }
+    public List<Employee> findByBusinessCenter(String bc) {
+        if (bc == null || bc.trim().isEmpty() || "ALL".equalsIgnoreCase(bc.trim())) {
+            return repo.findAll();
+        }
+        return repo.findByBusinessCenterSmart(bc.trim());
+    }
 }

@@ -7,11 +7,20 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, String> {
     List<Employee> findByBusinessCenter(String businessCenter);
 
+    @Query("SELECT DISTINCT e FROM Employee e WHERE " +
+           "UPPER(TRIM(e.businessCenter)) = UPPER(TRIM(:bc)) OR " +
+           "EXISTS (SELECT 1 FROM BusinessCenter c WHERE " +
+           "        (UPPER(TRIM(c.companyId)) = UPPER(TRIM(:bc)) OR UPPER(TRIM(c.companyName)) = UPPER(TRIM(:bc))) AND " +
+           "        (UPPER(TRIM(e.businessCenter)) = UPPER(TRIM(c.companyId)) OR UPPER(TRIM(e.businessCenter)) = UPPER(TRIM(c.companyName)))" +
+           ")")
+    List<Employee> findByBusinessCenterSmart(@Param("bc") String bc);
+
     @Query(value = "select e from Employee e where trim(e.epfNo) = :epfNo")
-    java.util.Optional<Employee> findByTrimmedEpfNo(@Param("epfNo") String epfNo);
+    Optional<Employee> findByTrimmedEpfNo(@Param("epfNo") String epfNo);
 }
