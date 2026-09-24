@@ -34,4 +34,40 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
         return repo.findByBusinessCenterSmart(bc.trim());
     }
+
+    @Override
+    public String getNextEpfNo(String bc) {
+        List<String> epfs = repo.findAllEpfNos();
+        long maxNum = 0;
+        int maxDigits = 3;
+        String prefix = "91EPF";
+        
+        for (String raw : epfs) {
+            if (raw == null) continue;
+            String epf = raw.trim().toUpperCase();
+            String numPart = "";
+            if (epf.startsWith("91EPF")) {
+                numPart = epf.substring(5).trim();
+            } else if (epf.startsWith("EPF")) {
+                numPart = epf.substring(3).trim();
+            } else {
+                numPart = epf.replaceAll("\\D", "");
+            }
+            if (!numPart.isEmpty()) {
+                try {
+                    long val = Long.parseLong(numPart);
+                    if (val > maxNum) {
+                        maxNum = val;
+                        if (numPart.length() > maxDigits) {
+                            maxDigits = numPart.length();
+                        }
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        
+        long nextVal = maxNum + 1;
+        String formatted = String.format("%0" + Math.max(3, maxDigits) + "d", nextVal);
+        return prefix + formatted;
+    }
 }

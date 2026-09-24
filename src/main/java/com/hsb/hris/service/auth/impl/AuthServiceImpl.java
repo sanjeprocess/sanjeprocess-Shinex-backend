@@ -69,7 +69,7 @@ public class AuthServiceImpl implements AuthService {
                     String token = jwtUtil.generateToken("superadmin", "SUPERADMIN");
                     resp.token = token;
                     resp.loginName = "superadmin";
-                    resp.clientBusinessCode = "ALL";
+                    resp.clientBusinessCode = (req.clientBusinessCode != null && !req.clientBusinessCode.isBlank()) ? req.clientBusinessCode : "ALL";
                     resp.fullName = dbSuperAdmin == null ? "Super Admin" : dbSuperAdmin.getFullName();
                     resp.nicNumber = dbSuperAdmin == null ? null : dbSuperAdmin.getNicNumber();
                     resp.role = "SUPERADMIN";

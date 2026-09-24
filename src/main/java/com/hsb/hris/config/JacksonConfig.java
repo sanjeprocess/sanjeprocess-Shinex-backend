@@ -1,4 +1,4 @@
-package com.hsb.hris.config;
+package com.hsb.hris.config;// backend validation for trimming string values in request body and response body
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -16,7 +16,7 @@ import java.io.IOException;
 public class JacksonConfig {
 
     @Bean
-    public Jackson2ObjectMapperBuilderCustomizer jacksonCustomizer() {
+    public Jackson2ObjectMapperBuilderCustomizer jacksonCustomizer() { 
         return builder -> {
             builder.deserializerByType(String.class, new JsonDeserializer<String>() {
                 @Override

@@ -31,15 +31,17 @@ public class AttendanceController {
             @RequestParam(value = "year", required = false) String year,
             @RequestParam(value = "month", required = false) String month,
             @RequestParam(value = "businessCenter", required = false) String businessCenter) {
-        List<Attendance> records = attendanceRepository.findAll();
+        List<Attendance> records;
+        if (businessCenter != null && !businessCenter.isBlank() && !"ALL".equalsIgnoreCase(businessCenter.trim())) {
+            records = attendanceRepository.findByBusinessCenterSmart(businessCenter.trim());
+        } else {
+            records = attendanceRepository.findAll();
+        }
         if (year != null && !year.isBlank()) {
             records = records.stream().filter(r -> year.equals(r.getAttYear())).toList();
         }
         if (month != null && !month.isBlank()) {
             records = records.stream().filter(r -> month.equals(r.getAttMonth())).toList();
-        }
-        if (businessCenter != null && !businessCenter.isBlank()) {
-            records = records.stream().filter(r -> businessCenter.equalsIgnoreCase(r.getBusinessCenter())).toList();
         }
         return ResponseEntity.ok(records);
     }
@@ -47,6 +49,17 @@ public class AttendanceController {
     @PostMapping
     public Attendance create(@RequestBody Attendance attendance) {
         try {
+            if (attendance.getDayIn() != null) {
+                if (attendance.getAttYear() == null || attendance.getAttYear().isBlank()) {
+                    attendance.setAttYear(String.valueOf(attendance.getDayIn().getYear()));
+                }
+                if (attendance.getAttMonth() == null || attendance.getAttMonth().isBlank()) {
+                    attendance.setAttMonth(String.format("%02d", attendance.getDayIn().getMonthValue()));
+                }
+            }
+            if (attendance.getAttMonth() != null && attendance.getAttMonth().trim().length() == 1) {
+                attendance.setAttMonth(String.format("%02d", Integer.parseInt(attendance.getAttMonth().trim())));
+            }
             return attendanceRepository.save(attendance);
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(
@@ -147,6 +160,19 @@ public class AttendanceController {
     public ResponseEntity<List<Attendance>> bulkSave(@RequestBody List<Attendance> records) {
         if (records == null || records.isEmpty()) {
             return ResponseEntity.badRequest().build();
+        }
+        for (Attendance a : records) {
+            if (a.getDayIn() != null) {
+                if (a.getAttYear() == null || a.getAttYear().isBlank()) {
+                    a.setAttYear(String.valueOf(a.getDayIn().getYear()));
+                }
+                if (a.getAttMonth() == null || a.getAttMonth().isBlank()) {
+                    a.setAttMonth(String.format("%02d", a.getDayIn().getMonthValue()));
+                }
+            }
+            if (a.getAttMonth() != null && a.getAttMonth().trim().length() == 1) {
+                a.setAttMonth(String.format("%02d", Integer.parseInt(a.getAttMonth().trim())));
+            }
         }
         return ResponseEntity.ok(attendanceRepository.saveAll(records));
     }

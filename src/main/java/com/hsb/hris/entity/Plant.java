@@ -60,6 +60,18 @@ public class Plant {
     @Column(name = "days_to_work_for_Att_Allow")
     private BigDecimal daysToWorkForAttAllowance;
 
+    @Transient
+    @JsonProperty("businessCenter")
+    private String businessCenter;
+
+    @Transient
+    @JsonProperty("profitCenter")
+    private String profitCenter;
+
+    @Transient
+    @JsonProperty("docPath")
+    private String docPath;
+
     public String getCustCode() { return custCode; }
     public void setCustCode(String custCode) { this.custCode = custCode; }
     public String getCustName() { return custName; }
@@ -86,4 +98,10 @@ public class Plant {
     public void setAttendanceAllowance(String attendanceAllowance) { this.attendanceAllowance = attendanceAllowance; }
     public BigDecimal getDaysToWorkForAttAllowance() { return daysToWorkForAttAllowance; }
     public void setDaysToWorkForAttAllowance(BigDecimal daysToWorkForAttAllowance) { this.daysToWorkForAttAllowance = daysToWorkForAttAllowance; }
+    public String getBusinessCenter() { return businessCenter; }
+    public void setBusinessCenter(String businessCenter) { this.businessCenter = businessCenter; }
+    public String getProfitCenter() { return profitCenter; }
+    public void setProfitCenter(String profitCenter) { this.profitCenter = profitCenter; }
+    public String getDocPath() { return docPath; }
+    public void setDocPath(String docPath) { this.docPath = docPath; }
 }

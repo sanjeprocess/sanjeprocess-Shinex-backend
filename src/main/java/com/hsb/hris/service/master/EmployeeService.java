@@ -11,4 +11,5 @@ public interface EmployeeService {
     Employee save(Employee e);
     void deleteById(String id);
     List<Employee> findByBusinessCenter(String bc);
+    String getNextEpfNo(String bc);
 }

@@ -12,12 +12,21 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.LocalDate;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping({"/api/leaves", "/api/transaction/leaves"})
 public class TLeaveController extends GenericMasterController<TLeave, Integer> {
+    @Override
+    @GetMapping
+    public List<TLeave> list(@RequestParam(value = "businessCenter", required = false) String businessCenter) {
+        if (businessCenter != null && !businessCenter.isBlank() && !"ALL".equalsIgnoreCase(businessCenter.trim())) {
+            return ((TLeaveRepository) repo).findByBusinessCenterSmart(businessCenter.trim());
+        }
+        return repo.findAll();
+    }
     private static final Logger log = LoggerFactory.getLogger(TLeaveController.class);
     public TLeaveController(TLeaveRepository repo) { super(repo); }
 

@@ -7,10 +7,21 @@ import com.hsb.hris.controller.master.GenericMasterController;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping({"/api/transaction-deductions", "/api/transaction/deductions"})
 public class TDeductionController extends GenericMasterController<TDeduction, TDeductionId> {
     public TDeductionController(TDeductionRepository repo) { super(repo); }
+
+    @Override
+    @GetMapping
+    public List<TDeduction> list(@RequestParam(value = "businessCenter", required = false) String businessCenter) {
+        if (businessCenter != null && !businessCenter.isBlank() && !"ALL".equalsIgnoreCase(businessCenter.trim())) {
+            return ((TDeductionRepository) repo).findByBusinessCenterSmart(businessCenter.trim());
+        }
+        return repo.findAll();
+    }
 
     @GetMapping("/{epfNo}/{didCode}")
     public ResponseEntity<TDeduction> get(@PathVariable String epfNo, @PathVariable String didCode) {

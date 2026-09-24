@@ -7,10 +7,21 @@ import com.hsb.hris.controller.master.GenericMasterController;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping({"/api/transaction-additions", "/api/transaction/additions"})
 public class TAdditionController extends GenericMasterController<TAddition, TAdditionId> {
     public TAdditionController(TAdditionRepository repo) { super(repo); }
+
+    @Override
+    @GetMapping
+    public List<TAddition> list(@RequestParam(value = "businessCenter", required = false) String businessCenter) {
+        if (businessCenter != null && !businessCenter.isBlank() && !"ALL".equalsIgnoreCase(businessCenter.trim())) {
+            return ((TAdditionRepository) repo).findByBusinessCenterSmart(businessCenter.trim());
+        }
+        return repo.findAll();
+    }
 
     @GetMapping("/{epfNo}/{addCode}")
     public ResponseEntity<TAddition> get(@PathVariable String epfNo, @PathVariable String addCode) {

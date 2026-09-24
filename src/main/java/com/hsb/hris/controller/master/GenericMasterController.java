@@ -19,7 +19,7 @@ public abstract class GenericMasterController<T, ID> {
     protected GenericMasterController(JpaRepository<T, ID> repo) { this.repo = repo; }
 
     @GetMapping
-    public List<T> list() { return repo.findAll(); }
+    public List<T> list(@RequestParam(value = "businessCenter", required = false) String businessCenter) { return repo.findAll(); }
 
     @GetMapping("/{id}")
     public ResponseEntity<T> get(@PathVariable ID id) {

@@ -14,7 +14,7 @@ public class LeaveTypeController extends GenericMasterController<LeaveType, Stri
 
     @Override
     @GetMapping
-    public List<LeaveType> list() {
+    public List<LeaveType> list(@RequestParam(value = "businessCenter", required = false) String businessCenter) {
         return repo.findAll().stream().map(this::normalize).toList();
     }
 

@@ -55,9 +55,18 @@ public class EmployeeController {
         return service.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/next-epf")
+    public ResponseEntity<java.util.Map<String, String>> getNextEpf(@RequestParam(value = "businessCenter", required = false) String businessCenter) {
+        String nextEpf = service.getNextEpfNo(businessCenter);
+        return ResponseEntity.ok(java.util.Map.of("nextEpf", nextEpf));
+    }
+
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Employee e) {
         try {
+            if (e.getEpfNo() == null || e.getEpfNo().trim().isEmpty()) {
+                e.setEpfNo(service.getNextEpfNo(e.getBusinessCenter()));
+            }
             normalize(e);
             if (e.getDateOfBirth() == null || e.getHiredDate() == null || e.getHiredMonth() == null || e.getHiredMonth().isBlank()) {
                 return ResponseEntity.badRequest().body("Date of birth, hired date, and hired month are required");
@@ -78,6 +87,10 @@ public class EmployeeController {
         e.setEpfNo(trim(e.getEpfNo(), 10));
         e.setPlantCode(code(e.getPlantCode()));
         e.setBusinessCenter(code(e.getBusinessCenter()));
+        if ((e.getHiredMonth() == null || e.getHiredMonth().isBlank()) && e.getHiredDate() != null) {
+            String monthName = e.getHiredDate().getMonth().name();
+            e.setHiredMonth(monthName.substring(0, 1).toUpperCase() + monthName.substring(1).toLowerCase());
+        }
         e.setHiredMonth(trim(e.getHiredMonth(), 15));
     }
 
