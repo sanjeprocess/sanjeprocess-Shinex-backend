@@ -57,10 +57,20 @@ IF OBJECT_ID(N'dbo.TBL_M_Section', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.TBL_M_Section (
         Section_Code nvarchar(6) NOT NULL CONSTRAINT PK_TBL_M_Section PRIMARY KEY,
-        Section_Name nvarchar(25) NULL
+        Section_Name nvarchar(50) NULL,
+        Business_Center nvarchar(100) NULL,
+        Basic_Salary decimal(18,2) NULL
     );
 END;
+ELSE
+BEGIN
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.TBL_M_Section') AND name = 'Business_Center')
+        ALTER TABLE dbo.TBL_M_Section ADD Business_Center nvarchar(100) NULL;
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.TBL_M_Section') AND name = 'Basic_Salary')
+        ALTER TABLE dbo.TBL_M_Section ADD Basic_Salary decimal(18,2) NULL;
+END;
 GO
+
 
 IF OBJECT_ID(N'dbo.TBL_M_Bank', N'U') IS NULL
 BEGIN

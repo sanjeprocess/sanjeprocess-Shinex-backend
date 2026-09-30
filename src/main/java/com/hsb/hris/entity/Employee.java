@@ -87,6 +87,9 @@ public class Employee {
     @Column(name = "Sunday_Poya_Extra")
     private Double sundayPoyaExtra;
 
+    @Column(name = "Emp_Photo_Url", columnDefinition = "nvarchar(max)")
+    private String photoUrl;
+
     public String getEpfNo() { return epfNo; }
     public void setEpfNo(String epfNo) { this.epfNo = epfNo; }
     public String getNicNo() { return nicNo; }
@@ -141,4 +144,6 @@ public class Employee {
     public void setBusinessCenter(String businessCenter) { this.businessCenter = businessCenter; }
     public Double getSundayPoyaExtra() { return sundayPoyaExtra; }
     public void setSundayPoyaExtra(Double sundayPoyaExtra) { this.sundayPoyaExtra = sundayPoyaExtra; }
+    public String getPhotoUrl() { return photoUrl; }
+    public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
 }
