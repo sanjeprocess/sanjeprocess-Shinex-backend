@@ -46,7 +46,24 @@ public class DatabaseSchemaMigration implements CommandLineRunner {
                 "        ALTER TABLE dbo.TBL_Emp_Master ADD Emp_Photo_Url nvarchar(max) NULL; " +
                 "END"
             );
-            System.out.println("✅ Database schema migration for TBL_M_Section & TBL_Emp_Master checked successfully.");
+            // Ensure Performance Indexes exist on high-traffic columns
+            jdbcTemplate.execute(
+                "IF OBJECT_ID(N'dbo.TBL_Emp_Master', N'U') IS NOT NULL " +
+                "BEGIN " +
+                "    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Emp_Business_Center' AND object_id = OBJECT_ID(N'dbo.TBL_Emp_Master')) " +
+                "        CREATE NONCLUSTERED INDEX IX_Emp_Business_Center ON dbo.TBL_Emp_Master (Emp_Business_Center); " +
+                "    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Emp_Section_Code' AND object_id = OBJECT_ID(N'dbo.TBL_Emp_Master')) " +
+                "        CREATE NONCLUSTERED INDEX IX_Emp_Section_Code ON dbo.TBL_Emp_Master (Emp_Section_Code); " +
+                "    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Emp_Plant_Code' AND object_id = OBJECT_ID(N'dbo.TBL_Emp_Master')) " +
+                "        CREATE NONCLUSTERED INDEX IX_Emp_Plant_Code ON dbo.TBL_Emp_Master (Emp_Plant_Code); " +
+                "END " +
+                "IF OBJECT_ID(N'dbo.TBL_M_Section', N'U') IS NOT NULL " +
+                "BEGIN " +
+                "    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Section_Business_Center' AND object_id = OBJECT_ID(N'dbo.TBL_M_Section')) " +
+                "        CREATE NONCLUSTERED INDEX IX_Section_Business_Center ON dbo.TBL_M_Section (Business_Center); " +
+                "END"
+            );
+            System.out.println("✅ Database schema migration and performance indexing verified successfully.");
         } catch (Exception e) {
             System.err.println("⚠️ Database schema migration note: " + e.getMessage());
         }
