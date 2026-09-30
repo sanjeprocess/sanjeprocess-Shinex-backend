@@ -28,12 +28,22 @@ public class SectionController extends GenericMasterController<Section, String> 
         String cleanId = id != null ? id.trim() : "";
         if (!cleanId.isEmpty()) {
             try {
-                // Safely unassign this section code from all employees before deleting
+                // 1. Unassign this section code from all employees
                 jdbcTemplate.update("UPDATE dbo.TBL_Emp_Master SET Emp_Section_Code = NULL WHERE RTRIM(LTRIM(Emp_Section_Code)) = ? OR Emp_Section_Code = ?", cleanId, cleanId);
             } catch (Exception ignored) {}
 
             try {
-                // Delete the section from TBL_M_Section
+                // 2. Drop any foreign key constraints in the database pointing to TBL_M_Section
+                String dropFksSql = 
+                    "DECLARE @sql NVARCHAR(MAX) = N''; " +
+                    "SELECT @sql += N'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)) + N'.' + QUOTENAME(OBJECT_NAME(parent_object_id)) + N' DROP CONSTRAINT ' + QUOTENAME(name) + N'; ' " +
+                    "FROM sys.foreign_keys WHERE referenced_object_id = OBJECT_ID(N'dbo.TBL_M_Section'); " +
+                    "IF @sql <> N'' EXEC sp_executesql @sql;";
+                jdbcTemplate.execute(dropFksSql);
+            } catch (Exception ignored) {}
+
+            try {
+                // 3. Delete the section from TBL_M_Section
                 jdbcTemplate.update("DELETE FROM dbo.TBL_M_Section WHERE RTRIM(LTRIM(Section_Code)) = ? OR Section_Code = ?", cleanId, cleanId);
             } catch (Exception e) {
                 repo.deleteById(cleanId);
