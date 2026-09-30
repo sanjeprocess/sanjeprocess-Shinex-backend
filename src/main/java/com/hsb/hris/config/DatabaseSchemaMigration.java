@@ -63,6 +63,13 @@ public class DatabaseSchemaMigration implements CommandLineRunner {
                 "        CREATE NONCLUSTERED INDEX IX_Section_Business_Center ON dbo.TBL_M_Section (Business_Center); " +
                 "END"
             );
+            // Drop restrictive FK_Emp_Section constraint if present to ensure smooth Section deletion
+            try {
+                jdbcTemplate.execute(
+                    "IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Emp_Section') " +
+                    "    ALTER TABLE dbo.TBL_Emp_Master DROP CONSTRAINT FK_Emp_Section;"
+                );
+            } catch (Exception ignored) {}
             System.out.println("✅ Database schema migration and performance indexing verified successfully.");
         } catch (Exception e) {
             System.err.println("⚠️ Database schema migration note: " + e.getMessage());

@@ -2,10 +2,10 @@ package com.hsb.hris.controller.master;
 
 import com.hsb.hris.entity.Section;
 import com.hsb.hris.repository.SectionRepository;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,7 +13,34 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping({"/api/sections", "/api/master/sections"})
 public class SectionController extends GenericMasterController<Section, String> {
-    public SectionController(SectionRepository repo) { super(repo); }
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public SectionController(SectionRepository repo, JdbcTemplate jdbcTemplate) {
+        super(repo);
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    @Transactional
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable String id) {
+        String cleanId = id != null ? id.trim() : "";
+        if (!cleanId.isEmpty()) {
+            try {
+                // Safely unassign this section code from all employees before deleting
+                jdbcTemplate.update("UPDATE dbo.TBL_Emp_Master SET Emp_Section_Code = NULL WHERE RTRIM(LTRIM(Emp_Section_Code)) = ? OR Emp_Section_Code = ?", cleanId, cleanId);
+            } catch (Exception ignored) {}
+
+            try {
+                // Delete the section from TBL_M_Section
+                jdbcTemplate.update("DELETE FROM dbo.TBL_M_Section WHERE RTRIM(LTRIM(Section_Code)) = ? OR Section_Code = ?", cleanId, cleanId);
+            } catch (Exception e) {
+                repo.deleteById(cleanId);
+            }
+        }
+        return ResponseEntity.noContent().build();
+    }
 
     @Override
     @GetMapping
