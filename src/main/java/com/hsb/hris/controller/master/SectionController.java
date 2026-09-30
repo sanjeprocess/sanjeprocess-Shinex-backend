@@ -53,6 +53,61 @@ public class SectionController extends GenericMasterController<Section, String> 
     }
 
     @Override
+    @PostMapping
+    public Section create(@RequestBody Section entity) {
+        if (entity.getSectionName() == null || entity.getSectionName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Section name is required");
+        }
+        String cleanName = entity.getSectionName().trim().toLowerCase();
+        String cleanBc = entity.getBusinessCenter() != null ? entity.getBusinessCenter().trim().toUpperCase() : "";
+
+        List<Section> existing = repo.findAll();
+        boolean isDuplicate = existing.stream().anyMatch(s -> {
+            if (s.getSectionName() == null) return false;
+            String sName = s.getSectionName().trim().toLowerCase();
+            String sBc = s.getBusinessCenter() != null ? s.getBusinessCenter().trim().toUpperCase() : "";
+            boolean sameBc = cleanBc.isEmpty() || cleanBc.equals("ALL") || sBc.isEmpty() || sBc.equals(cleanBc);
+            return sameBc && sName.equals(cleanName);
+        });
+
+        if (isDuplicate) {
+            throw new IllegalArgumentException("A section named '" + entity.getSectionName().trim() + "' already exists in this Business Center.");
+        }
+
+        return repo.save(entity);
+    }
+
+    @Override
+    @PutMapping("/{id}")
+    public ResponseEntity<Section> update(@PathVariable String id, @RequestBody Section entity) {
+        if (!repo.existsById(id)) return ResponseEntity.notFound().build();
+
+        if (entity.getSectionName() == null || entity.getSectionName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Section name is required");
+        }
+        String cleanName = entity.getSectionName().trim().toLowerCase();
+        String cleanBc = entity.getBusinessCenter() != null ? entity.getBusinessCenter().trim().toUpperCase() : "";
+
+        List<Section> existing = repo.findAll();
+        boolean isDuplicate = existing.stream().anyMatch(s -> {
+            if (s.getSectionCode() != null && s.getSectionCode().trim().equalsIgnoreCase(id.trim())) {
+                return false; // Skip current record
+            }
+            if (s.getSectionName() == null) return false;
+            String sName = s.getSectionName().trim().toLowerCase();
+            String sBc = s.getBusinessCenter() != null ? s.getBusinessCenter().trim().toUpperCase() : "";
+            boolean sameBc = cleanBc.isEmpty() || cleanBc.equals("ALL") || sBc.isEmpty() || sBc.equals(cleanBc);
+            return sameBc && sName.equals(cleanName);
+        });
+
+        if (isDuplicate) {
+            throw new IllegalArgumentException("A section named '" + entity.getSectionName().trim() + "' already exists in this Business Center.");
+        }
+
+        return ResponseEntity.ok(repo.save(entity));
+    }
+
+    @Override
     @GetMapping
     public List<Section> list(@RequestParam(value = "businessCenter", required = false) String businessCenter) {
         List<Section> all = repo.findAll();
