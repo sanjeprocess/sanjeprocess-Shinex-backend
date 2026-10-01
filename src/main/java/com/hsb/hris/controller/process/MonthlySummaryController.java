@@ -149,7 +149,7 @@ public class MonthlySummaryController {
                 mealValue = 0, otAmount = 0;
 
         if (attendance != null) {
-            workingDays = value(attendance.getNormalShift()) > 0 ? value(attendance.getNormalShift()) : (attDaysCome > 0 ? attDaysCome : 26);
+            workingDays = value(attendance.getNormalShift()) > 0 ? value(attendance.getNormalShift()) : attDaysCome;
             otHours = (value(attendance.getOt1Hours()) + value(attendance.getOt2Hours())) > 0 ?
                     (value(attendance.getOt1Hours()) + value(attendance.getOt2Hours())) : attOtHours;
             if (attendance.getDayRate() != null && attendance.getDayRate() > 0) dayAllowance = attendance.getDayRate();
@@ -161,7 +161,7 @@ public class MonthlySummaryController {
             mealValue = value(attendance.getTotalMealValue()) > 0 ? value(attendance.getTotalMealValue()) : attMealValue;
             otAmount = value(attendance.getOt1Total()) + value(attendance.getOt2Total());
         } else {
-            workingDays = attDaysCome > 0 ? attDaysCome : 26;
+            workingDays = attDaysCome;
             otHours = attOtHours;
             if (attDayAllowance > 0) dayAllowance = attDayAllowance;
             if (attNightAllowance > 0) nightAllowance = attNightAllowance;
