@@ -323,5 +323,52 @@ public class MonthlySummaryController {
         return result;
     }
 
+    @PostMapping("/sync")
+    public Map<String, Object> syncMonthlySummary(@RequestParam String year, @RequestParam String month) {
+        String yr = year.trim();
+        String mo = String.format("%02d", Integer.parseInt(month.trim()));
+        List<Employee> allEmps = employees.findAll();
+        int count = 0;
+        double totalDays = 0;
+        double totalOt = 0;
+
+        for (Employee emp : allEmps) {
+            String epf = emp.getEpfNo() != null ? emp.getEpfNo().trim() : "";
+            if (epf.isEmpty()) continue;
+
+            List<Attendance> attList = attendanceRepo.findByEpfNoAndAttYearAndAttMonth(epf, yr, mo);
+            double empPresentDays = 0;
+            double empOt = 0;
+            for (Attendance a : attList) {
+                double weight = (a.getHalfDay() != null && (a.getHalfDay() == 1.0 || a.getHalfDay() == 0.5)) ? 0.5 : 1.0;
+                empPresentDays += weight;
+                if (a.getTotalOt() != null && a.getTotalOt() > 0) empOt += a.getTotalOt();
+            }
+
+            AttSummaryId id = new AttSummaryId(yr, mo, epf);
+            AttendanceSummary summary = summaries.findById(id).orElse(new AttendanceSummary());
+            summary.setAttYear(yr);
+            summary.setAttMonth(mo);
+            summary.setEpfNo(epf);
+            summary.setBusinessCenter(emp.getBusinessCenter() != null ? emp.getBusinessCenter() : "001");
+            summary.setNormalShift(empPresentDays);
+            summary.setOt1Hours(empOt);
+            summaries.save(summary);
+
+            count++;
+            totalDays += empPresentDays;
+            totalOt += empOt;
+        }
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("success", true);
+        resp.put("processedEmployees", count);
+        resp.put("totalDays", totalDays);
+        resp.put("totalOtHours", totalOt);
+        resp.put("year", yr);
+        resp.put("month", mo);
+        return resp;
+    }
+
     private double value(Double number) { return number == null ? 0d : number; }
 }
