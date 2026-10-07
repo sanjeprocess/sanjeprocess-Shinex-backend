@@ -147,6 +147,13 @@ public class AuthServiceImpl implements AuthService {
             resp.canViewSite = user.isCanViewSite();
             resp.accessLevel = user.getAccessLevel();
             resp.canManageUsers = user.isCanManageUsers();
+            if (user.getModulePermissions() != null) {
+                try {
+                    resp.modulePermissions = new com.fasterxml.jackson.databind.ObjectMapper().readValue(user.getModulePermissions(), Object.class);
+                } catch (Exception e) {
+                    resp.modulePermissions = user.getModulePermissions();
+                }
+            }
             return resp;
 
         } catch (Exception e) {

@@ -22,8 +22,23 @@ public class ShinexHrisApplication {
     }
 
     @Bean
-    CommandLineRunner runner(EmployeeService employeeService, LoginUserRepository userRepo, PasswordEncoder passwordEncoder) {
+    CommandLineRunner runner(EmployeeService employeeService, LoginUserRepository userRepo, PasswordEncoder passwordEncoder, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         return args -> {
+            // ── Auto-migrate schema for Module_Permissions column if missing ──
+            try {
+                jdbcTemplate.execute(
+                    "IF COL_LENGTH(N'dbo.TBL_Loging_User', N'Module_Permissions') IS NULL " +
+                    "ALTER TABLE [dbo].[TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;"
+                );
+            } catch (Exception e1) {
+                try {
+                    jdbcTemplate.execute(
+                        "IF COL_LENGTH(N'TBL_Loging_User', N'Module_Permissions') IS NULL " +
+                        "ALTER TABLE [TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;"
+                    );
+                } catch (Exception ignored) {}
+            }
+
             // ── Seed Superadmin User (superadmin / 123 / SUPERADMIN) ──
             try {
                 LoginUser superAdmin = userRepo.findByLoginName("superadmin").orElse(null);

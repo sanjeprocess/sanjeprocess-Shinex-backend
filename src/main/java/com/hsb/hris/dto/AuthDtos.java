@@ -19,6 +19,7 @@ public class AuthDtos {
         public Boolean canViewSite;
         public String accessLevel;
         public Boolean canManageUsers;
+        public Object modulePermissions;
     }
 
     public static class AdminDto {
@@ -32,5 +33,6 @@ public class AuthDtos {
         public Boolean canViewSite;
         public String accessLevel;
         public Boolean canManageUsers;
+        public Object modulePermissions;
     }
 }

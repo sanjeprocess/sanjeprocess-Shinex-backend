@@ -63,6 +63,13 @@ public class AdminController {
                 dto.canViewSite = u.isCanViewSite();
                 dto.accessLevel = u.getAccessLevel();
                 dto.canManageUsers = u.isCanManageUsers();
+                if (u.getModulePermissions() != null) {
+                    try {
+                        dto.modulePermissions = MAPPER.readValue(u.getModulePermissions(), Object.class);
+                    } catch (Exception e) {
+                        dto.modulePermissions = u.getModulePermissions();
+                    }
+                }
                 if ("superadmin".equalsIgnoreCase(u.getLoginName())) {
                     hasSuperAdmin = true;
                     dto.role = "SUPERADMIN";
@@ -165,8 +172,11 @@ public class AdminController {
         if (req.clientBusinessCode != null) {
             user.setClientBusinessCode(req.clientBusinessCode.trim());
         }
-        if (req.password != null && !req.password.isBlank()) {
-            user.setPassword(passwordEncoder.encode(req.password));
+        if (req.fullName != null) {
+            user.setFullName(trimOptional(req.fullName, 100));
+        }
+        if (req.nicNumber != null) {
+            user.setNicNumber(trimOptional(req.nicNumber, 20));
         }
         applyPermissions(user, req);
 
@@ -201,17 +211,31 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
+
     private void applyPermissions(LoginUser user, AuthDtos.AdminDto req) {
         if (!"SUPERADMIN".equalsIgnoreCase(user.getRole())) {
             if (req.blocked != null) user.setBlocked(req.blocked);
             if (req.canViewSite != null) user.setCanViewSite(req.canViewSite);
             if (req.accessLevel != null) user.setAccessLevel(req.accessLevel);
             if (req.canManageUsers != null) user.setCanManageUsers(req.canManageUsers);
+            if (req.modulePermissions != null) {
+                if (req.modulePermissions instanceof String str) {
+                    user.setModulePermissions(str);
+                } else {
+                    try {
+                        user.setModulePermissions(MAPPER.writeValueAsString(req.modulePermissions));
+                    } catch (Exception e) {
+                        user.setModulePermissions(req.modulePermissions.toString());
+                    }
+                }
+            }
         } else {
             user.setBlocked(false);
             user.setCanViewSite(true);
             user.setAccessLevel("READ_WRITE");
             user.setCanManageUsers(true);
+            user.setModulePermissions(null);
         }
     }
 
@@ -220,6 +244,15 @@ public class AdminController {
         dto.canViewSite = user.isCanViewSite();
         dto.accessLevel = user.getAccessLevel();
         dto.canManageUsers = user.isCanManageUsers();
+        if (user.getModulePermissions() != null) {
+            try {
+                dto.modulePermissions = MAPPER.readValue(user.getModulePermissions(), Object.class);
+            } catch (Exception e) {
+                dto.modulePermissions = user.getModulePermissions();
+            }
+        } else {
+            dto.modulePermissions = null;
+        }
     }
 
     private String trimOptional(String value, int max) {

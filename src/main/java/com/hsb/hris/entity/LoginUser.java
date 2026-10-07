@@ -34,6 +34,9 @@ public class LoginUser {
     @Column(name = "Manage_Users", nullable = false)
     private Boolean canManageUsers = false;
 
+    @Column(name = "Module_Permissions", length = 4000)
+    private String modulePermissions;
+
     @Transient
     private String role = "ADMIN";
 
@@ -84,4 +87,7 @@ public class LoginUser {
     public void setCanManageUsers(boolean value) { this.canManageUsers = value; }
     public Boolean getCanManageUsers() { return canManageUsers; }
     public void setCanManageUsers(String value) { this.canManageUsers = "Y".equalsIgnoreCase(value) || "1".equals(value) || "true".equalsIgnoreCase(value); }
+
+    public String getModulePermissions() { return modulePermissions; }
+    public void setModulePermissions(String modulePermissions) { this.modulePermissions = modulePermissions; }
 }

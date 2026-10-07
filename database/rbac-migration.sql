@@ -20,4 +20,6 @@ IF COL_LENGTH(N'dbo.TBL_Loging_User', N'Manage_Users') IS NULL
     ALTER TABLE [dbo].[TBL_Loging_User] ADD [Manage_Users] bit NOT NULL CONSTRAINT DF_TBL_Loging_User_Manage_Users DEFAULT 0;
 IF COL_LENGTH(N'dbo.TBL_Loging_User', N'Access_Level') IS NULL
     ALTER TABLE [dbo].[TBL_Loging_User] ADD [Access_Level] nvarchar(20) NOT NULL CONSTRAINT DF_TBL_Loging_User_Access_Level DEFAULT N'EDIT_ALLOWED';
+IF COL_LENGTH(N'dbo.TBL_Loging_User', N'Module_Permissions') IS NULL
+    ALTER TABLE [dbo].[TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;
 GO
