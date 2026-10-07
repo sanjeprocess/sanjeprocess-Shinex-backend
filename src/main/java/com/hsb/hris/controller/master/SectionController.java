@@ -100,7 +100,18 @@ public class SectionController extends GenericMasterController<Section, String> 
             throw new IllegalArgumentException("A section named '" + entity.getSectionName().trim() + "' already exists in this Business Center.");
         }
 
-        return ResponseEntity.ok(repo.save(entity));
+        Section saved = repo.save(entity);
+        if (entity.getBasicSalary() != null && entity.getBasicSalary() > 0 && id != null) {
+            String cleanCode = id.trim();
+            try {
+                jdbcTemplate.update(
+                    "UPDATE dbo.TBL_Emp_Master SET Emp_Basic_Salary = ? WHERE RTRIM(LTRIM(Emp_Section_Code)) = ? OR Emp_Section_Code = ?",
+                    entity.getBasicSalary(), cleanCode, cleanCode
+                );
+            } catch (Exception ignored) {}
+        }
+
+        return ResponseEntity.ok(saved);
     }
 
     @Override
