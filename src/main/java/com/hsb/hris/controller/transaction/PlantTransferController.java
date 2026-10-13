@@ -80,7 +80,7 @@ public class PlantTransferController {
             String cleanBc = businessCenter.trim().toUpperCase();
             return list.stream().filter(t -> {
                 String tBc = t.getBusinessCenter();
-                if (tBc == null || tBc.isBlank()) return false;
+                if (tBc == null || tBc.isBlank()) return true;
                 String up = tBc.trim().toUpperCase();
                 return up.equals(cleanBc) || up.startsWith(cleanBc) || cleanBc.startsWith(up);
             }).toList();

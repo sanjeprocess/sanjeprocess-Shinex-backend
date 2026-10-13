@@ -113,8 +113,34 @@ public class EmployeeController {
     @PutMapping("/{id}")
     public ResponseEntity<Employee> update(@PathVariable String id, @RequestBody Employee e) {
         return service.findById(id).map(existing -> {
-            e.setEpfNo(id);
-            return ResponseEntity.ok(service.save(e));
+            if (e.getFirstName() != null && !e.getFirstName().isBlank()) existing.setFirstName(e.getFirstName());
+            if (e.getLastName() != null && !e.getLastName().isBlank()) existing.setLastName(e.getLastName());
+            if (e.getNicNo() != null && !e.getNicNo().isBlank()) existing.setNicNo(e.getNicNo());
+            if (e.getPlantCode() != null && !e.getPlantCode().isBlank()) existing.setPlantCode(code(e.getPlantCode()));
+            if (e.getDateOfBirth() != null) existing.setDateOfBirth(e.getDateOfBirth());
+            if (e.getAddress() != null && !e.getAddress().isBlank()) existing.setAddress(e.getAddress());
+            if (e.getContactNo() != null && !e.getContactNo().isBlank()) existing.setContactNo(e.getContactNo());
+            if (e.getMobileNo() != null && !e.getMobileNo().isBlank()) existing.setMobileNo(e.getMobileNo());
+            if (e.getEmailAddress() != null && !e.getEmailAddress().isBlank()) existing.setEmailAddress(e.getEmailAddress());
+            if (e.getHiredDate() != null) existing.setHiredDate(e.getHiredDate());
+            if (e.getHiredMonth() != null && !e.getHiredMonth().isBlank()) existing.setHiredMonth(e.getHiredMonth());
+            if (e.getBasicSalary() != null && e.getBasicSalary() > 0) existing.setBasicSalary(e.getBasicSalary());
+            if (e.getBankAccountNumber() != null && !e.getBankAccountNumber().isBlank()) existing.setBankAccountNumber(e.getBankAccountNumber());
+            if (e.getBankName() != null && !e.getBankName().isBlank()) existing.setBankName(e.getBankName());
+            if (e.getBankBranchName() != null && !e.getBankBranchName().isBlank()) existing.setBankBranchName(e.getBankBranchName());
+            if (e.getSwift() != null && !e.getSwift().isBlank()) existing.setSwift(e.getSwift());
+            if (e.getGender() != null && !e.getGender().isBlank()) existing.setGender(e.getGender());
+            if (e.getSectionCode() != null && !e.getSectionCode().isBlank()) existing.setSectionCode(e.getSectionCode());
+            if (e.getDayAllowance() != null) existing.setDayAllowance(e.getDayAllowance());
+            if (e.getNightAllowance() != null) existing.setNightAllowance(e.getNightAllowance());
+            if (e.getbCardYes() != null) existing.setbCardYes(e.getbCardYes());
+            if (e.getEnativeYes() != null) existing.setEnativeYes(e.getEnativeYes());
+            if (e.getDethDenotion() != null) existing.setDethDenotion(e.getDethDenotion());
+            if (e.getBusinessCenter() != null && !e.getBusinessCenter().isBlank()) existing.setBusinessCenter(code(e.getBusinessCenter()));
+            if (e.getSundayPoyaExtra() != null) existing.setSundayPoyaExtra(e.getSundayPoyaExtra());
+            if (e.getPhotoUrl() != null && !e.getPhotoUrl().isBlank()) existing.setPhotoUrl(e.getPhotoUrl());
+            normalize(existing);
+            return ResponseEntity.ok(service.save(existing));
         }).orElse(ResponseEntity.notFound().build());
     }
 

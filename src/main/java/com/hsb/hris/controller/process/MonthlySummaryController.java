@@ -20,16 +20,17 @@ public class MonthlySummaryController {
     private final DeductionMasterRepository deductionMasters;
     private final AttendanceRepository attendanceRepo;
     private final PlantRepository plantRepo;
+    private final SectionRepository sectionRepo;
 
     public MonthlySummaryController(EmployeeRepository employees, TAdditionRepository additions,
                                     TDeductionRepository deductions, TLoanRepository loans,
                                     AttendanceSummaryRepository summaries, AdditionMasterRepository additionMasters,
                                     DeductionMasterRepository deductionMasters, AttendanceRepository attendanceRepo,
-                                    PlantRepository plantRepo) {
+                                    PlantRepository plantRepo, SectionRepository sectionRepo) {
         this.employees = employees; this.additions = additions; this.deductions = deductions;
         this.loans = loans; this.summaries = summaries; this.additionMasters = additionMasters;
         this.deductionMasters = deductionMasters; this.attendanceRepo = attendanceRepo;
-        this.plantRepo = plantRepo;
+        this.plantRepo = plantRepo; this.sectionRepo = sectionRepo;
     }
 
     @GetMapping
@@ -46,6 +47,15 @@ public class MonthlySummaryController {
         result.put("sectionCode", employee.getSectionCode() == null ? "" : employee.getSectionCode().trim());
 
         double basicSalary = value(employee.getBasicSalary());
+        if (employee.getSectionCode() != null && !employee.getSectionCode().trim().isEmpty()) {
+            String sCode = employee.getSectionCode().trim();
+            Section sec = sectionRepo.findAll().stream()
+                    .filter(s -> s.getSectionCode() != null && (s.getSectionCode().trim().equalsIgnoreCase(sCode) || (s.getSectionName() != null && s.getSectionName().trim().equalsIgnoreCase(sCode))))
+                    .findFirst().orElse(null);
+            if (sec != null && sec.getBasicSalary() != null && sec.getBasicSalary() > 0) {
+                basicSalary = sec.getBasicSalary();
+            }
+        }
         result.put("basicSalary", basicSalary);
 
         // Allowances & Additions
@@ -132,11 +142,13 @@ public class MonthlySummaryController {
             }
             if ("Y".equalsIgnoreCase(a.getNightShift()) || "Y".equalsIgnoreCase(a.getFullNight())) {
                 attNightDays += dayWeight;
+                if (a.getNightAllowance() != null && a.getNightAllowance() > 0) {
+                    attNightAllowance += a.getNightAllowance();
+                }
             }
 
             if (a.getTotalOt() != null && a.getTotalOt() > 0) attOtHours += a.getTotalOt();
             if (a.getDayAllowance() != null && a.getDayAllowance() > 0) attDayAllowance += a.getDayAllowance();
-            if (a.getNightAllowance() != null && a.getNightAllowance() > 0) attNightAllowance += a.getNightAllowance();
             if (a.getSundayPoyaExtra() != null && a.getSundayPoyaExtra() > 0) attPoyaExtra += a.getSundayPoyaExtra();
             if (a.getTotalMealValue() != null && a.getTotalMealValue() > 0) attMealValue += a.getTotalMealValue();
         }
@@ -145,26 +157,29 @@ public class MonthlySummaryController {
         AttendanceSummary attendance = summaries.findById(new AttSummaryId(yr, mo, epf)).orElse(null);
         Map<String, Object> attendanceData = new LinkedHashMap<>();
         double workingDays = 0, otHours = 0, dayAllowance = value(employee.getDayAllowance()),
-                nightAllowance = value(employee.getNightAllowance()), poyaDayExtra = value(employee.getSundayPoyaExtra()),
+                nightAllowanceRate = value(employee.getNightAllowance()), poyaDayExtra = value(employee.getSundayPoyaExtra()),
                 mealValue = 0, otAmount = 0;
 
-        if (attendance != null) {
-            workingDays = value(attendance.getNormalShift()) > 0 ? value(attendance.getNormalShift()) : attDaysCome;
-            otHours = (value(attendance.getOt1Hours()) + value(attendance.getOt2Hours())) > 0 ?
-                    (value(attendance.getOt1Hours()) + value(attendance.getOt2Hours())) : attOtHours;
-            if (attendance.getDayRate() != null && attendance.getDayRate() > 0) dayAllowance = attendance.getDayRate();
+        if (monthlyAttList != null && !monthlyAttList.isEmpty()) {
+            workingDays = attDaysCome;
+            otHours = attOtHours;
+            if (attendance != null && attendance.getDayRate() != null && attendance.getDayRate() > 0) dayAllowance = attendance.getDayRate();
             else if (attDayAllowance > 0) dayAllowance = attDayAllowance;
-            if (attendance.getNightRate() != null && attendance.getNightRate() > 0) nightAllowance = attendance.getNightRate();
-            else if (attNightAllowance > 0) nightAllowance = attNightAllowance;
-            if (attendance.getSundayPoyaExtra() != null && attendance.getSundayPoyaExtra() > 0) poyaDayExtra = attendance.getSundayPoyaExtra();
+            if (attendance != null && attendance.getNightRate() != null && attendance.getNightRate() > 0) nightAllowanceRate = attendance.getNightRate();
+            if (attendance != null && attendance.getSundayPoyaExtra() != null && attendance.getSundayPoyaExtra() > 0) poyaDayExtra = attendance.getSundayPoyaExtra();
             else if (attPoyaExtra > 0) poyaDayExtra = attPoyaExtra;
-            mealValue = value(attendance.getTotalMealValue()) > 0 ? value(attendance.getTotalMealValue()) : attMealValue;
-            otAmount = value(attendance.getOt1Total()) + value(attendance.getOt2Total());
+            mealValue = attMealValue > 0 ? attMealValue : (attendance != null ? value(attendance.getTotalMealValue()) : 0);
+        } else if (attendance != null) {
+            workingDays = value(attendance.getNormalShift());
+            otHours = value(attendance.getOt1Hours()) + value(attendance.getOt2Hours());
+            if (attendance.getDayRate() != null && attendance.getDayRate() > 0) dayAllowance = attendance.getDayRate();
+            if (attendance.getNightRate() != null && attendance.getNightRate() > 0) nightAllowanceRate = attendance.getNightRate();
+            if (attendance.getSundayPoyaExtra() != null && attendance.getSundayPoyaExtra() > 0) poyaDayExtra = attendance.getSundayPoyaExtra();
+            mealValue = value(attendance.getTotalMealValue());
         } else {
             workingDays = attDaysCome;
             otHours = attOtHours;
             if (attDayAllowance > 0) dayAllowance = attDayAllowance;
-            if (attNightAllowance > 0) nightAllowance = attNightAllowance;
             if (attPoyaExtra > 0) poyaDayExtra = attPoyaExtra;
             if (attMealValue > 0) mealValue = attMealValue;
         }
@@ -176,16 +191,29 @@ public class MonthlySummaryController {
 
         double poyaDays = attPoyaDays;
         double poyaRate = Math.round(normalRate * 1.5 * 100.0) / 100.0;
-        double poyaAmount = poyaDayExtra > 0 ? poyaDayExtra : Math.round(poyaDays * poyaRate * 100.0) / 100.0;
+        double poyaAmount = 0.0;
+        if (poyaDays > 0) {
+            poyaAmount = poyaDayExtra > 0 ? Math.round(poyaDays * poyaDayExtra * 100.0) / 100.0 : Math.round(poyaDays * poyaRate * 100.0) / 100.0;
+        }
 
         double nightDays = attNightDays;
-        double nightRate = nightAllowance > 0 ? nightAllowance : 540.0;
-        double nightAmount = (attNightAllowance > 0 || nightAllowance > 0) ? (nightAllowance > 0 ? nightAllowance : attNightAllowance) : (nightDays * nightRate);
+        double nightRate = nightAllowanceRate > 0 ? nightAllowanceRate : (employee.getNightAllowance() != null ? employee.getNightAllowance() : 0.0);
+        double nightAmount = 0.0;
+        if (nightDays > 0) {
+            if (attNightAllowance > 0) {
+                nightAmount = attNightAllowance;
+            } else if (nightRate > 0) {
+                nightAmount = Math.round(nightDays * nightRate * 100.0) / 100.0;
+            }
+        }
 
+        // For a normal 8-hour working day, OT is paid at 1.5 times the hourly rate:
         double hourlyRate = normalRate > 0 ? (normalRate / 8.0) : 0;
         double otRate1_5 = Math.round(hourlyRate * 1.5 * 100.0) / 100.0;
-        if (otAmount <= 0 && otHours > 0 && normalRate > 0) {
+        if (otHours > 0 && normalRate > 0) {
             otAmount = Math.round(otHours * otRate1_5 * 100.0) / 100.0;
+        } else {
+            otAmount = 0.0;
         }
 
         double statutoryHolidayCount = attStatutoryDays;
@@ -205,7 +233,7 @@ public class MonthlySummaryController {
         attendanceData.put("otRate", otRate1_5);
         attendanceData.put("otAmount", otAmount);
         attendanceData.put("dayAllowance", dayAllowance);
-        attendanceData.put("nightAllowance", nightAllowance);
+        attendanceData.put("nightAllowance", nightAmount);
         attendanceData.put("poyaDayExtra", poyaAmount);
         attendanceData.put("mealValue", mealValue);
         attendanceData.put("statutoryHolidayCount", statutoryHolidayCount);
@@ -213,10 +241,7 @@ public class MonthlySummaryController {
         result.put("attendance", attendanceData);
 
         // Pay Advice components (Generated_Pay_Advice_v2 layout)
-        double grossSalary = normalAmount + nightAmount + poyaAmount + otAmount + dayAllowance + totalAdditions + statutoryHolidayAmount;
-        if (attendance != null && attendance.getGrossSalary() != null && attendance.getGrossSalary() > 0) {
-            grossSalary = attendance.getGrossSalary();
-        }
+        double grossSalary = Math.round((normalAmount + nightAmount + poyaAmount + otAmount + dayAllowance + totalAdditions + statutoryHolidayAmount) * 100.0) / 100.0;
 
         // EPF 8%
         double epfBase = normalAmount + epfQualifyingAdditions;
@@ -350,9 +375,27 @@ public class MonthlySummaryController {
             summary.setAttYear(yr);
             summary.setAttMonth(mo);
             summary.setEpfNo(epf);
-            summary.setBusinessCenter(emp.getBusinessCenter() != null ? emp.getBusinessCenter() : "001");
+            String fullName = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " " + (emp.getLastName() == null ? "" : emp.getLastName())).trim();
+            summary.setEmpName(fullName.isEmpty() ? epf : fullName);
+            summary.setPlantCode(emp.getPlantCode() != null && !emp.getPlantCode().isBlank() ? emp.getPlantCode().trim() : "PL001");
+            summary.setBusinessCenter(emp.getBusinessCenter() != null && !emp.getBusinessCenter().isBlank() ? emp.getBusinessCenter().trim() : "001");
+            double basicSal = emp.getBasicSalary() != null ? emp.getBasicSalary() : 0.0;
+            if (emp.getSectionCode() != null && !emp.getSectionCode().trim().isEmpty()) {
+                String sCode = emp.getSectionCode().trim();
+                Section sec = sectionRepo.findAll().stream()
+                        .filter(s -> s.getSectionCode() != null && (s.getSectionCode().trim().equalsIgnoreCase(sCode) || (s.getSectionName() != null && s.getSectionName().trim().equalsIgnoreCase(sCode))))
+                        .findFirst().orElse(null);
+                if (sec != null && sec.getBasicSalary() != null && sec.getBasicSalary() > 0) {
+                    basicSal = sec.getBasicSalary();
+                }
+            }
+            double hrRate = basicSal > 0 ? (basicSal / 8.0) : 0.0;
+            double otRate = Math.round(hrRate * 1.5 * 100.0) / 100.0;
+            double otTotal = Math.round(empOt * otRate * 100.0) / 100.0;
             summary.setNormalShift(empPresentDays);
             summary.setOt1Hours(empOt);
+            summary.setOt1Rate(otRate);
+            summary.setOt1Total(otTotal);
             summaries.save(summary);
 
             count++;
