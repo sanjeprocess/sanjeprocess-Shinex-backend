@@ -170,7 +170,8 @@ public class AdminController {
             user.setRole(req.role.toUpperCase());
         }
         if (req.clientBusinessCode != null) {
-            user.setClientBusinessCode(req.clientBusinessCode.trim());
+            String bCode = req.clientBusinessCode.split(" - ", 2)[0].trim();
+            user.setClientBusinessCode(bCode);
         }
         if (req.fullName != null) {
             user.setFullName(trimOptional(req.fullName, 100));
