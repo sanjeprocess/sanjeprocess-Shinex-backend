@@ -134,6 +134,21 @@ public class AuthServiceImpl implements AuthService {
             }
 
             String role = user.getRole() != null ? user.getRole() : "ADMIN";
+            boolean isSuperAdminRole = "SUPERADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role);
+
+            // Scope verification: non-superadmin users assigned to a specific Business Center cannot log into other Business Centers
+            String assignedBc = user.getClientBusinessCode() != null ? user.getClientBusinessCode().trim() : "";
+            if (!isSuperAdminRole && !assignedBc.isEmpty() && !"ALL".equalsIgnoreCase(assignedBc)) {
+                String requestedBc = req.clientBusinessCode != null ? req.clientBusinessCode.trim() : "";
+                String assignedCode = assignedBc.split(" - ")[0].split(" / ")[0].trim();
+                String requestedCode = requestedBc.split(" - ")[0].split(" / ")[0].trim();
+
+                if (!requestedCode.isEmpty() && !assignedCode.equalsIgnoreCase(requestedCode)) {
+                    resp.message = "Access denied: You are only authorized to log into your assigned Business Center (" + assignedBc + ").";
+                    return resp;
+                }
+            }
+
             String token = jwtUtil.generateToken(user.getLoginName(), role);
             resp.token = token;
             resp.loginName = user.getLoginName();
