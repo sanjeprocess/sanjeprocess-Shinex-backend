@@ -15,15 +15,17 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping({"/api/attendance", "/api/transaction/attendance"})
+@RequestMapping({"/api/attendance", "/api/transaction/attendance", "/attendance"})
 public class AttendanceController {
 
     private final AttendanceService service;
     private final AttendanceRepository attendanceRepository;
+    private final com.hsb.hris.repository.EmployeeRepository employeeRepository;
 
-    public AttendanceController(AttendanceService service, AttendanceRepository attendanceRepository) {
+    public AttendanceController(AttendanceService service, AttendanceRepository attendanceRepository, com.hsb.hris.repository.EmployeeRepository employeeRepository) {
         this.service = service;
         this.attendanceRepository = attendanceRepository;
+        this.employeeRepository = employeeRepository;
     }
 
     @GetMapping
@@ -59,6 +61,13 @@ public class AttendanceController {
             }
             if (attendance.getAttMonth() != null && attendance.getAttMonth().trim().length() == 1) {
                 attendance.setAttMonth(String.format("%02d", Integer.parseInt(attendance.getAttMonth().trim())));
+            }
+            if ((attendance.getEmployeeName() == null || attendance.getEmployeeName().isBlank()) && attendance.getEpfNo() != null) {
+                employeeRepository.findByTrimmedEpfNo(attendance.getEpfNo().trim()).ifPresent(emp -> {
+                    String fullName = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " " +
+                                       (emp.getLastName() == null ? "" : emp.getLastName())).trim();
+                    attendance.setEmployeeName(fullName);
+                });
             }
             return attendanceRepository.save(attendance);
         } catch (DataIntegrityViolationException ex) {
@@ -116,6 +125,9 @@ public class AttendanceController {
             existing.setStatutoryHolidays(attendance.getStatutoryHolidays());
             existing.setSundayPoyaExtra(attendance.getSundayPoyaExtra());
             existing.setBusinessCenter(attendance.getBusinessCenter());
+            if (attendance.getEmployeeName() != null && !attendance.getEmployeeName().isBlank()) {
+                existing.setEmployeeName(attendance.getEmployeeName());
+            }
             return ResponseEntity.ok(attendanceRepository.save(existing));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -157,10 +169,26 @@ public class AttendanceController {
     }
 
     @PostMapping("/bulk")
-    public ResponseEntity<List<Attendance>> bulkSave(@RequestBody List<Attendance> records) {
+    public ResponseEntity<?> bulkSave(@RequestBody List<Attendance> records) {
         if (records == null || records.isEmpty()) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "No attendance records provided for saving."));
         }
+
+        // Cache employee names for instant resolution
+        Map<String, String> empNameMap = new java.util.HashMap<>();
+        try {
+            for (com.hsb.hris.entity.Employee emp : employeeRepository.findAll()) {
+                if (emp.getEpfNo() != null) {
+                    String fullName = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " " +
+                                       (emp.getLastName() == null ? "" : emp.getLastName())).trim();
+                    empNameMap.put(emp.getEpfNo().trim().toUpperCase(), fullName);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // Group rows by Plant, Year, and Month
+        // Key: PlantCode|Year|Month
+        Map<String, List<Attendance>> grouped = new java.util.LinkedHashMap<>();
         for (Attendance a : records) {
             if (a.getDayIn() != null) {
                 if (a.getAttYear() == null || a.getAttYear().isBlank()) {
@@ -173,8 +201,133 @@ public class AttendanceController {
             if (a.getAttMonth() != null && a.getAttMonth().trim().length() == 1) {
                 a.setAttMonth(String.format("%02d", Integer.parseInt(a.getAttMonth().trim())));
             }
+
+            // Populate Employee Name
+            if ((a.getEmployeeName() == null || a.getEmployeeName().isBlank()) && a.getEpfNo() != null) {
+                String resolvedName = empNameMap.get(a.getEpfNo().trim().toUpperCase());
+                if (resolvedName != null && !resolvedName.isBlank()) {
+                    a.setEmployeeName(resolvedName);
+                }
+            }
+
+            String plant = (a.getPlantCode() != null && !a.getPlantCode().isBlank()) ? a.getPlantCode().trim() : "DEFAULT";
+            String yr = (a.getAttYear() != null && !a.getAttYear().isBlank()) ? a.getAttYear().trim() : "2026";
+            String mo = (a.getAttMonth() != null && !a.getAttMonth().isBlank()) ? a.getAttMonth().trim() : "01";
+            String groupKey = plant + "|" + yr + "|" + mo;
+
+            grouped.computeIfAbsent(groupKey, k -> new java.util.ArrayList<>()).add(a);
         }
-        return ResponseEntity.ok(attendanceRepository.saveAll(records));
+
+        List<Map<String, Object>> summaries = new java.util.ArrayList<>();
+        List<Attendance> allSaved = new java.util.ArrayList<>();
+        int grandInserted = 0;
+        int grandUpdated = 0;
+        int grandFailed = 0;
+
+        for (Map.Entry<String, List<Attendance>> entry : grouped.entrySet()) {
+            String[] parts = entry.getKey().split("\\|");
+            String plantCode = parts[0];
+            String yr = parts[1];
+            String mo = parts[2];
+            List<Attendance> groupRows = entry.getValue();
+
+            int inserted = 0;
+            int updated = 0;
+            int failed = 0;
+            java.util.Set<String> distinctEpfs = new java.util.HashSet<>();
+
+            for (Attendance a : groupRows) {
+                if (a.getEpfNo() != null) distinctEpfs.add(a.getEpfNo().trim().toUpperCase());
+                try {
+                    com.hsb.hris.entity.id.AttendanceId id = new com.hsb.hris.entity.id.AttendanceId(
+                        a.getAttYear().trim(), a.getAttMonth().trim(), a.getEpfNo().trim(), a.getDayIn()
+                    );
+                    Attendance existing = attendanceRepository.findById(id).orElse(null);
+                    if (existing != null) {
+                        // Update existing row
+                        existing.setPlantCode(a.getPlantCode());
+                        existing.setWorkingDays(a.getWorkingDays());
+                        existing.setOtCalAuto(a.getOtCalAuto());
+                        existing.setNoOfStaff(a.getNoOfStaff());
+                        existing.setAttAllowance(a.getAttAllowance());
+                        existing.setDaysForAttAllowance(a.getDaysForAttAllowance());
+                        existing.setPoyaSaturdayNormal(a.getPoyaSaturdayNormal());
+                        existing.setBasicSalary(a.getBasicSalary());
+                        existing.setDayAllowance(a.getDayAllowance());
+                        existing.setNightAllowance(a.getNightAllowance());
+                        existing.setTimeIn(a.getTimeIn());
+                        existing.setDayOut(a.getDayOut());
+                        existing.setTimeOut(a.getTimeOut());
+                        existing.setHalfDay(a.getHalfDay());
+                        existing.setTotalWorkingHours(a.getTotalWorkingHours());
+                        existing.setTotalOt(a.getTotalOt());
+                        existing.setNormalDay(a.getNormalDay());
+                        existing.setSaturdayPoya(a.getSaturdayPoya());
+                        existing.setSpecialDay(a.getSpecialDay());
+                        existing.setLateAllowNo(a.getLateAllowNo());
+                        existing.setDayShift(a.getDayShift());
+                        existing.setSecondShift(a.getSecondShift());
+                        existing.setNightShift(a.getNightShift());
+                        existing.setFullNight(a.getFullNight());
+                        existing.setNoOfMeal(a.getNoOfMeal());
+                        existing.setTotalMealValue(a.getTotalMealValue());
+                        existing.setStatutoryHolidays(a.getStatutoryHolidays());
+                        existing.setSundayPoyaExtra(a.getSundayPoyaExtra());
+                        existing.setBusinessCenter(a.getBusinessCenter());
+                        if (a.getEmployeeName() != null && !a.getEmployeeName().isBlank()) {
+                            existing.setEmployeeName(a.getEmployeeName());
+                        }
+                        Attendance saved = attendanceRepository.save(existing);
+                        allSaved.add(saved);
+                        updated++;
+                    } else {
+                        // Insert new row
+                        Attendance saved = attendanceRepository.save(a);
+                        allSaved.add(saved);
+                        inserted++;
+                    }
+                } catch (Exception ex) {
+                    failed++;
+                }
+            }
+
+            grandInserted += inserted;
+            grandUpdated += updated;
+            grandFailed += failed;
+
+            int totalGroupSaved = inserted + updated;
+            String summaryMsg = String.format("Plant %s – %s/%s – %d employees – %d rows saved (inserted %d, updated %d, failed %d)",
+                    plantCode, yr, mo, distinctEpfs.size(), totalGroupSaved, inserted, updated, failed);
+
+            Map<String, Object> groupSummary = new java.util.LinkedHashMap<>();
+            groupSummary.put("plantCode", plantCode);
+            groupSummary.put("year", yr);
+            groupSummary.put("month", mo);
+            groupSummary.put("employeeCount", distinctEpfs.size());
+            groupSummary.put("totalRows", totalGroupSaved);
+            groupSummary.put("inserted", inserted);
+            groupSummary.put("updated", updated);
+            groupSummary.put("failed", failed);
+            groupSummary.put("message", summaryMsg);
+            summaries.add(groupSummary);
+        }
+
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("status", "success");
+        response.put("totalSaved", grandInserted + grandUpdated);
+        response.put("inserted", grandInserted);
+        response.put("updated", grandUpdated);
+        response.put("failed", grandFailed);
+        response.put("summaries", summaries);
+        if (!summaries.isEmpty()) {
+            response.put("message", summaries.get(0).get("message"));
+        } else {
+            response.put("message", String.format("%d rows saved (inserted %d, updated %d, failed %d)",
+                    grandInserted + grandUpdated, grandInserted, grandUpdated, grandFailed));
+        }
+        response.put("records", allSaved);
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/auto-update")

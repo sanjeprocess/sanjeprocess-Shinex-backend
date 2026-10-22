@@ -72,6 +72,50 @@ public class DatabaseSchemaMigration implements CommandLineRunner {
                     "IF @sql <> N'' EXEC sp_executesql @sql;";
                 jdbcTemplate.execute(dropFks);
             } catch (Exception ignored) {}
+            // Ensure TBL_T_Attendance has Employee_Name column
+            try {
+                jdbcTemplate.execute(
+                    "IF OBJECT_ID(N'dbo.TBL_T_Attendance', N'U') IS NOT NULL " +
+                    "BEGIN " +
+                    "    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.TBL_T_Attendance') AND name = 'Employee_Name') " +
+                    "        ALTER TABLE dbo.TBL_T_Attendance ADD Employee_Name nvarchar(100) NULL; " +
+                    "END"
+                );
+            } catch (Exception ignored) {}
+
+            // Ensure TBL_Salary_Calc exists
+            try {
+                jdbcTemplate.execute(
+                    "IF OBJECT_ID(N'dbo.TBL_Salary_Calc', N'U') IS NULL " +
+                    "BEGIN " +
+                    "    CREATE TABLE dbo.TBL_Salary_Calc ( " +
+                    "        id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY, " +
+                    "        EPF_No NVARCHAR(10) NOT NULL, " +
+                    "        Employee_Name NVARCHAR(100) NULL, " +
+                    "        Plant NVARCHAR(50) NOT NULL, " +
+                    "        Year NVARCHAR(4) NOT NULL, " +
+                    "        Month NVARCHAR(2) NOT NULL, " +
+                    "        Days_Worked FLOAT NULL, " +
+                    "        OT_Hours FLOAT NULL, " +
+                    "        Basic_Salary DECIMAL(18,2) NULL, " +
+                    "        Gross_Salary DECIMAL(18,2) NULL, " +
+                    "        EPF_8 DECIMAL(18,2) NULL, " +
+                    "        EPF_12 DECIMAL(18,2) NULL, " +
+                    "        ETF_3 DECIMAL(18,2) NULL, " +
+                    "        Advance_Deduction DECIMAL(18,2) NULL, " +
+                    "        Telephone_Deduction DECIMAL(18,2) NULL, " +
+                    "        Meal_Deduction DECIMAL(18,2) NULL, " +
+                    "        Loan_Deduction DECIMAL(18,2) NULL, " +
+                    "        Other_Deductions DECIMAL(18,2) NULL, " +
+                    "        Total_Deductions DECIMAL(18,2) NULL, " +
+                    "        Net_Salary DECIMAL(18,2) NULL, " +
+                    "        Calculated_At DATETIME2 NULL " +
+                    "    ); " +
+                    "    CREATE NONCLUSTERED INDEX IX_Salary_Calc_Year_Month_Plant ON dbo.TBL_Salary_Calc (Year, Month, Plant); " +
+                    "END"
+                );
+            } catch (Exception ignored) {}
+
             System.out.println("✅ Database schema migration and performance indexing verified successfully.");
         } catch (Exception e) {
             System.err.println("⚠️ Database schema migration note: " + e.getMessage());

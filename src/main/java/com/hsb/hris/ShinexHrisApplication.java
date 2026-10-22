@@ -24,62 +24,70 @@ public class ShinexHrisApplication {
     @Bean
     CommandLineRunner runner(EmployeeService employeeService, LoginUserRepository userRepo, PasswordEncoder passwordEncoder, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         return args -> {
-            // ── Auto-migrate schema for Module_Permissions column if missing ──
             try {
-                jdbcTemplate.execute(
-                    "IF COL_LENGTH(N'dbo.TBL_Loging_User', N'Module_Permissions') IS NULL " +
-                    "ALTER TABLE [dbo].[TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;"
-                );
-            } catch (Exception e1) {
+                // ── Auto-migrate schema for Module_Permissions column if missing ──
                 try {
                     jdbcTemplate.execute(
-                        "IF COL_LENGTH(N'TBL_Loging_User', N'Module_Permissions') IS NULL " +
-                        "ALTER TABLE [TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;"
+                        "IF COL_LENGTH(N'dbo.TBL_Loging_User', N'Module_Permissions') IS NULL " +
+                        "ALTER TABLE [dbo].[TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;"
                     );
-                } catch (Exception ignored) {}
-            }
-
-            // ── Seed Superadmin User (superadmin / 123 / SUPERADMIN) ──
-            try {
-                LoginUser superAdmin = userRepo.findByLoginName("superadmin").orElse(null);
-                if (superAdmin == null) {
-                    superAdmin = new LoginUser();
-                    superAdmin.setLoginName("superadmin");
-                    superAdmin.setPassword(passwordEncoder.encode("123"));
-                    superAdmin.setRole("SUPERADMIN");
-                    superAdmin.setClientBusinessCode("ALL");
-                    userRepo.save(superAdmin);
-                    System.out.println("✅ Superadmin account seeded successfully (username: superadmin, password: 123)");
-                } else {
-                    // Ensure role is SUPERADMIN and password encoded
-                    if (!"SUPERADMIN".equalsIgnoreCase(superAdmin.getRole())) {
-                        superAdmin.setRole("SUPERADMIN");
-                        userRepo.save(superAdmin);
-                    }
+                } catch (Exception e1) {
+                    try {
+                        jdbcTemplate.execute(
+                            "IF COL_LENGTH(N'TBL_Loging_User', N'Module_Permissions') IS NULL " +
+                            "ALTER TABLE [TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;"
+                        );
+                    } catch (Exception ignored) {}
                 }
-            } catch (Exception e) {
-                System.out.println("⚠️ Note on superadmin user seed: " + e.getMessage());
-            }
 
-            // ── Seed Employees (if empty and json present) ──
-            if (employeeService.findAll().isEmpty()) {
-                ObjectMapper mapper = new ObjectMapper();
+                // ── Seed Superadmin User (superadmin / 123 / SUPERADMIN) ──
                 try {
-                    InputStream inputStream = getClass().getResourceAsStream("/employees.json");
-                    if (inputStream == null) {
-                        java.io.File file = new java.io.File("employees.json");
-                        if (file.exists()) {
-                            List<Employee> employees = mapper.readValue(file, new TypeReference<List<Employee>>(){});
-                            for (Employee employee : employees) {
-                                Employee saved = employeeService.save(employee);
-                                System.out.println("Saved employee: " + saved.getEpfNo() + " - " + saved.getFirstName());
-                            }
-                            System.out.println("Employees saved to database successfully.");
+                    LoginUser superAdmin = userRepo.findByLoginName("superadmin").orElse(null);
+                    if (superAdmin == null) {
+                        superAdmin = new LoginUser();
+                        superAdmin.setLoginName("superadmin");
+                        superAdmin.setPassword(passwordEncoder.encode("123"));
+                        superAdmin.setRole("SUPERADMIN");
+                        superAdmin.setClientBusinessCode("ALL");
+                        userRepo.save(superAdmin);
+                        System.out.println("✅ Superadmin account seeded successfully (username: superadmin, password: 123)");
+                    } else {
+                        // Ensure role is SUPERADMIN and password encoded
+                        if (!"SUPERADMIN".equalsIgnoreCase(superAdmin.getRole())) {
+                            superAdmin.setRole("SUPERADMIN");
+                            userRepo.save(superAdmin);
                         }
                     }
                 } catch (Exception e) {
-                    System.out.println("Unable to save employees: " + e.getMessage());
+                    System.out.println("⚠️ Note on superadmin user seed: " + e.getMessage());
                 }
+
+                // ── Seed Employees (if empty and json present) ──
+                try {
+                    if (employeeService.findAll().isEmpty()) {
+                        ObjectMapper mapper = new ObjectMapper();
+                        try {
+                            InputStream inputStream = getClass().getResourceAsStream("/employees.json");
+                            if (inputStream == null) {
+                                java.io.File file = new java.io.File("employees.json");
+                                if (file.exists()) {
+                                    List<Employee> employees = mapper.readValue(file, new TypeReference<List<Employee>>(){});
+                                    for (Employee employee : employees) {
+                                        Employee saved = employeeService.save(employee);
+                                        System.out.println("Saved employee: " + saved.getEpfNo() + " - " + saved.getFirstName());
+                                    }
+                                    System.out.println("Employees saved to database successfully.");
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Unable to save employees: " + e.getMessage());
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("⚠️ Warning on employee seed check: " + e.getMessage());
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Warning: Database is unreachable during startup seed runner. Continuing app startup: " + e.getMessage());
             }
         };
     }

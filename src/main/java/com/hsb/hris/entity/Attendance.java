@@ -118,7 +118,13 @@ public class Attendance {
     @Column(name = "Business_Center", length = 100, nullable = false)
     private String businessCenter;
 
+    @Column(name = "Employee_Name", length = 100)
+    private String employeeName;
+
     // --- getters and setters ---
+
+    public String getEmployeeName() { return employeeName; }
+    public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
 
     public String getAttYear() { return attYear; }
     public void setAttYear(String attYear) { this.attYear = attYear; }
