@@ -13,4 +13,6 @@ public interface SalaryCalculationRepository extends JpaRepository<SalaryCalcula
     List<SalaryCalculation> findByYearAndMonthAndPlant(String year, String month, String plant);
     List<SalaryCalculation> findByPlant(String plant);
     Optional<SalaryCalculation> findByEpfNoAndPlantAndYearAndMonth(String epfNo, String plant, String year, String month);
+    Optional<SalaryCalculation> findByEpfNoAndPlantAndYearAndMonthAndBusinessCenter(
+            String epfNo, String plant, String year, String month, String businessCenter);
 }

@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 
@@ -24,16 +23,10 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() {
-        // Ensure the secret is at least 32 bytes for HS256. If shorter, repeat/pad the secret.
-        byte[] keyBytes = secret == null ? new byte[32] : secret.getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < 32) {
-            byte[] padded = new byte[32];
-            for (int i = 0; i < padded.length; i++) {
-                padded[i] = keyBytes[i % keyBytes.length];
-            }
-            keyBytes = padded;
+        if (secret == null || secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET must contain at least 32 bytes.");
         }
-        this.key = Keys.hmacShaKeyFor(keyBytes);
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     public String generateToken(String username) {

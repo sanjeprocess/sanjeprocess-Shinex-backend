@@ -21,8 +21,9 @@ public class SalaryController {
     public ResponseEntity<List<SalaryCalculation>> calculate(
             @RequestParam String year,
             @RequestParam String month,
-            @RequestParam(required = false) String plant) {
-        List<SalaryCalculation> results = salaryService.calculateSalary(year, month, plant);
+            @RequestParam(required = false) String plant,
+            @RequestParam(required = false) String businessCenter) {
+        List<SalaryCalculation> results = salaryService.calculateSalary(year, month, plant, businessCenter);
         return ResponseEntity.ok(results);
     }
 
@@ -30,8 +31,9 @@ public class SalaryController {
     public ResponseEntity<List<SalaryCalculation>> getSalary(
             @RequestParam(required = false) String year,
             @RequestParam(required = false) String month,
-            @RequestParam(required = false) String plant) {
-        List<SalaryCalculation> results = salaryService.getCalculatedSalary(year, month, plant);
+            @RequestParam(required = false) String plant,
+            @RequestParam(required = false) String businessCenter) {
+        List<SalaryCalculation> results = salaryService.getCalculatedSalary(year, month, plant, businessCenter);
         return ResponseEntity.ok(results);
     }
 }

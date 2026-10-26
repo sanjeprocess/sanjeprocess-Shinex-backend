@@ -1,94 +1,69 @@
 package com.hsb.hris;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hsb.hris.entity.Employee;
-import com.hsb.hris.entity.LoginUser;
-import com.hsb.hris.repository.LoginUserRepository;
-import com.hsb.hris.service.master.EmployeeService;
-import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import java.io.InputStream;
-import java.util.List;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class ShinexHrisApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(ShinexHrisApplication.class);
+
     public static void main(String[] args) {
         SpringApplication.run(ShinexHrisApplication.class, args);
     }
 
     @Bean
-    CommandLineRunner runner(EmployeeService employeeService, LoginUserRepository userRepo, PasswordEncoder passwordEncoder, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
+    CommandLineRunner databaseReadinessCheck(JdbcTemplate jdbcTemplate,
+                                             @Value("${app.schema.migrate:false}") boolean schemaMigrationEnabled) {
         return args -> {
             try {
-                // ── Auto-migrate schema for Module_Permissions column if missing ──
-                try {
-                    jdbcTemplate.execute(
-                        "IF COL_LENGTH(N'dbo.TBL_Loging_User', N'Module_Permissions') IS NULL " +
-                        "ALTER TABLE [dbo].[TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;"
-                    );
-                } catch (Exception e1) {
-                    try {
-                        jdbcTemplate.execute(
-                            "IF COL_LENGTH(N'TBL_Loging_User', N'Module_Permissions') IS NULL " +
-                            "ALTER TABLE [TBL_Loging_User] ADD [Module_Permissions] nvarchar(max) NULL;"
-                        );
-                    } catch (Exception ignored) {}
-                }
+                jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+            } catch (CannotGetJdbcConnectionException exception) {
+                log.warn("Database is unavailable during startup; the application will continue.");
+                return;
+            }
 
-                // ── Seed Superadmin User (superadmin / 123 / SUPERADMIN) ──
-                try {
-                    LoginUser superAdmin = userRepo.findByLoginName("superadmin").orElse(null);
-                    if (superAdmin == null) {
-                        superAdmin = new LoginUser();
-                        superAdmin.setLoginName("superadmin");
-                        superAdmin.setPassword(passwordEncoder.encode("123"));
-                        superAdmin.setRole("SUPERADMIN");
-                        superAdmin.setClientBusinessCode("ALL");
-                        userRepo.save(superAdmin);
-                        System.out.println("✅ Superadmin account seeded successfully (username: superadmin, password: 123)");
-                    } else {
-                        // Ensure role is SUPERADMIN and password encoded
-                        if (!"SUPERADMIN".equalsIgnoreCase(superAdmin.getRole())) {
-                            superAdmin.setRole("SUPERADMIN");
-                            userRepo.save(superAdmin);
-                        }
-                    }
-                } catch (Exception e) {
-                    System.out.println("⚠️ Note on superadmin user seed: " + e.getMessage());
-                }
-
-                // ── Seed Employees (if empty and json present) ──
-                try {
-                    if (employeeService.findAll().isEmpty()) {
-                        ObjectMapper mapper = new ObjectMapper();
-                        try {
-                            InputStream inputStream = getClass().getResourceAsStream("/employees.json");
-                            if (inputStream == null) {
-                                java.io.File file = new java.io.File("employees.json");
-                                if (file.exists()) {
-                                    List<Employee> employees = mapper.readValue(file, new TypeReference<List<Employee>>(){});
-                                    for (Employee employee : employees) {
-                                        Employee saved = employeeService.save(employee);
-                                        System.out.println("Saved employee: " + saved.getEpfNo() + " - " + saved.getFirstName());
-                                    }
-                                    System.out.println("Employees saved to database successfully.");
-                                }
-                            }
-                        } catch (Exception e) {
-                            System.out.println("Unable to save employees: " + e.getMessage());
-                        }
-                    }
-                } catch (Exception e) {
-                    System.out.println("⚠️ Warning on employee seed check: " + e.getMessage());
-                }
-            } catch (Exception e) {
-                System.err.println("⚠️ Warning: Database is unreachable during startup seed runner. Continuing app startup: " + e.getMessage());
+            if (schemaMigrationEnabled) {
+                runAdditiveMigration(jdbcTemplate);
             }
         };
+    }
+
+    private void runAdditiveMigration(JdbcTemplate jdbcTemplate) throws IOException {
+        ClassPathResource script = new ClassPathResource("db/changes.sql");
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(script.getInputStream(), StandardCharsets.UTF_8))) {
+            StringBuilder batch = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if ("GO".equalsIgnoreCase(line.trim())) {
+                    executeBatch(jdbcTemplate, batch);
+                } else {
+                    batch.append(line).append('\n');
+                }
+            }
+            executeBatch(jdbcTemplate, batch);
+        }
+    }
+
+    private void executeBatch(JdbcTemplate jdbcTemplate, StringBuilder batch) {
+        String sql = batch.toString().trim();
+        if (!sql.isEmpty()) {
+            jdbcTemplate.execute(sql);
+            batch.setLength(0);
+        }
     }
 }

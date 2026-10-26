@@ -26,6 +26,9 @@ public class SalaryCalculation {
     @Column(name = "Month", length = 2, nullable = false)
     private String month;
 
+    @Column(name = "Business_Center", length = 100)
+    private String businessCenter;
+
     @Column(name = "Days_Worked")
     private Double daysWorked;
 
@@ -90,6 +93,8 @@ public class SalaryCalculation {
 
     public String getMonth() { return month; }
     public void setMonth(String month) { this.month = month; }
+    public String getBusinessCenter() { return businessCenter; }
+    public void setBusinessCenter(String businessCenter) { this.businessCenter = businessCenter; }
 
     public Double getDaysWorked() { return daysWorked; }
     public void setDaysWorked(Double daysWorked) { this.daysWorked = daysWorked; }

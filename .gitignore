@@ -10,6 +10,8 @@ server.log
 run.log
 server-out.log
 server-err.log
+.env.local
+run-local.ps1
 
 # IDE settings
 .idea/

@@ -5,6 +5,7 @@ import com.hsb.hris.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -20,6 +21,7 @@ public class ExcelStyleSalaryService {
     private final AdditionMasterRepository additionMasterRepo;
     private final DeductionMasterRepository deductionMasterRepo;
     private final SalaryCalculationRepository salaryCalcRepo;
+    private final DeductionTransactionRepository deductionTransactionRepo;
 
     public ExcelStyleSalaryService(
             AttendanceRepository attendanceRepo,
@@ -29,7 +31,8 @@ public class ExcelStyleSalaryService {
             TAdditionRepository additionRepo,
             AdditionMasterRepository additionMasterRepo,
             DeductionMasterRepository deductionMasterRepo,
-            SalaryCalculationRepository salaryCalcRepo) {
+            SalaryCalculationRepository salaryCalcRepo,
+            DeductionTransactionRepository deductionTransactionRepo) {
         this.attendanceRepo = attendanceRepo;
         this.employeeRepo = employeeRepo;
         this.deductionRepo = deductionRepo;
@@ -38,6 +41,7 @@ public class ExcelStyleSalaryService {
         this.additionMasterRepo = additionMasterRepo;
         this.deductionMasterRepo = deductionMasterRepo;
         this.salaryCalcRepo = salaryCalcRepo;
+        this.deductionTransactionRepo = deductionTransactionRepo;
     }
 
     /**
@@ -124,7 +128,7 @@ public class ExcelStyleSalaryService {
     }
 
     @Transactional
-    public List<SalaryCalculation> calculateSalary(String year, String month, String plantFilter) {
+    public List<SalaryCalculation> calculateSalary(String year, String month, String plantFilter, String businessCenterFilter) {
         String yr = year.trim();
         String mo = String.format("%02d", Integer.parseInt(month.trim()));
 
@@ -133,21 +137,43 @@ public class ExcelStyleSalaryService {
                 .filter(a -> yr.equals(a.getAttYear()) && mo.equals(a.getAttMonth()))
                 .filter(a -> plantFilter == null || plantFilter.isBlank() || "ALL".equalsIgnoreCase(plantFilter.trim()) ||
                         (a.getPlantCode() != null && a.getPlantCode().trim().equalsIgnoreCase(plantFilter.trim())))
+                .filter(a -> businessCenterFilter == null || businessCenterFilter.isBlank() || "ALL".equalsIgnoreCase(businessCenterFilter.trim()) ||
+                        (a.getBusinessCenter() != null && a.getBusinessCenter().trim().equalsIgnoreCase(businessCenterFilter.trim())))
                 .toList();
 
-        // Load employees
-        Map<String, Employee> employeeMap = employeeRepo.findAll().stream()
+        // Load ALL employees for the selected business center (fix: include employees with 0 attendance)
+        List<Employee> filteredEmployees;
+        if (businessCenterFilter == null || businessCenterFilter.isBlank() || "ALL".equalsIgnoreCase(businessCenterFilter.trim())) {
+            filteredEmployees = employeeRepo.findAll();
+        } else {
+            filteredEmployees = employeeRepo.findByBusinessCenterSmart(businessCenterFilter.trim());
+        }
+        Map<String, Employee> employeeMap = filteredEmployees.stream()
                 .filter(e -> e.getEpfNo() != null)
                 .collect(Collectors.toMap(e -> e.getEpfNo().trim().toUpperCase(), e -> e, (a, b) -> a));
 
-        // Group attendance by (EPF_No, Plant)
+        // Group attendance by (EPF_No, Plant, BusinessCenter)
         Map<String, List<Attendance>> empPlantGroup = new LinkedHashMap<>();
         for (Attendance a : attendanceRecords) {
             if (a.getEpfNo() == null) continue;
             String epf = a.getEpfNo().trim().toUpperCase();
             String plant = (a.getPlantCode() != null && !a.getPlantCode().isBlank()) ? a.getPlantCode().trim() : "DEFAULT";
-            String key = epf + "|" + plant;
+            String businessCenter = a.getBusinessCenter() == null ? "" : a.getBusinessCenter().trim();
+            String key = epf + "|" + plant + "|" + businessCenter;
             empPlantGroup.computeIfAbsent(key, k -> new ArrayList<>()).add(a);
+        }
+
+        // Add all employees from the business center even if they have no attendance this month
+        for (Employee emp : filteredEmployees) {
+            if (emp.getEpfNo() == null) continue;
+            String epf = emp.getEpfNo().trim().toUpperCase();
+            String plant = (emp.getPlantCode() != null && !emp.getPlantCode().isBlank()) ? emp.getPlantCode().trim() : "DEFAULT";
+            String bc = (emp.getBusinessCenter() != null) ? emp.getBusinessCenter().trim() : "";
+            if (plantFilter == null || plantFilter.isBlank() || "ALL".equalsIgnoreCase(plantFilter.trim())
+                    || plant.equalsIgnoreCase(plantFilter.trim())) {
+                String key = epf + "|" + plant + "|" + bc;
+                empPlantGroup.computeIfAbsent(key, k -> new ArrayList<>());
+            }
         }
 
         // Deductions & Loans
@@ -155,12 +181,31 @@ public class ExcelStyleSalaryService {
         List<TLoan> allLoans = loanRepo.findAll();
         List<TAddition> allAdditions = additionRepo.findAll();
 
+        // Build per-employee advance monthly cut map from DeductionTransaction
+        java.time.LocalDate monthStart = java.time.LocalDate.of(Integer.parseInt(yr), Integer.parseInt(mo), 1);
+        java.time.LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
+        Map<String, Double> empAdvanceMonthlyCutMap = new HashMap<>();
+        for (DeductionTransaction dt : deductionTransactionRepo.findAll()) {
+            if (dt.getEpfNo() == null) continue;
+            String epfKey = dt.getEpfNo().trim().toUpperCase();
+            boolean isAdvance = (dt.getDidCode() != null && dt.getDidCode().toLowerCase().contains("adv"))
+                    || (dt.getDeductionName() != null && dt.getDeductionName().toLowerCase().contains("advance"));
+            if (!isAdvance || !"ACTIVE".equalsIgnoreCase(dt.getStatus())) continue;
+            if (dt.getStartDate() != null && dt.getEndDate() != null
+                    && !dt.getStartDate().isAfter(monthEnd) && !dt.getEndDate().isBefore(monthStart)) {
+                if (dt.getMonthlyCut() != null) {
+                    empAdvanceMonthlyCutMap.merge(epfKey, dt.getMonthlyCut().doubleValue(), Double::sum);
+                }
+            }
+        }
+
         List<SalaryCalculation> results = new ArrayList<>();
 
         for (Map.Entry<String, List<Attendance>> entry : empPlantGroup.entrySet()) {
             String[] parts = entry.getKey().split("\\|");
             String epf = parts[0];
             String plant = parts[1];
+            String businessCenter = parts.length > 2 ? parts[2] : "";
             List<Attendance> attList = entry.getValue();
 
             Employee emp = employeeMap.get(epf);
@@ -209,8 +254,7 @@ public class ExcelStyleSalaryService {
                 }
             }
 
-            // Deductions for this employee
-            double advance = 0;
+            // Deductions for this employee (telephone and other from TBL_T_Diduction)
             double telephone = 0;
             double otherDeduct = 0;
             for (TDeduction d : allDeductions) {
@@ -218,11 +262,13 @@ public class ExcelStyleSalaryService {
                         && yr.equals(d.getAddYear()) && mo.equals(d.getAddMonth())) {
                     double amt = d.getDidAmount() != null ? d.getDidAmount() : 0;
                     String code = (d.getDidCode() != null) ? d.getDidCode().toLowerCase() : "";
-                    if (code.contains("adv")) advance += amt;
-                    else if (code.contains("tel") || code.contains("phone")) telephone += amt;
-                    else otherDeduct += amt;
+                    if (code.contains("tel") || code.contains("phone")) telephone += amt;
+                    else if (!code.contains("adv")) otherDeduct += amt;
                 }
             }
+
+            // Advance deduction from DeductionTransaction (monthly installment for active advances this month)
+            double advance = empAdvanceMonthlyCutMap.getOrDefault(epf, 0.0);
 
             // Loan deduction
             double loanCut = 0;
@@ -241,12 +287,15 @@ public class ExcelStyleSalaryService {
                     performanceAllowance, otherAdditions, 0.0,
                     advance, telephone, mealValue, loanCut, otherDeduct
             );
+            row.setBusinessCenter(businessCenter);
 
             // Upsert into TBL_Salary_Calc
-            Optional<SalaryCalculation> existing = salaryCalcRepo.findByEpfNoAndPlantAndYearAndMonth(epf, plant, yr, mo);
+            Optional<SalaryCalculation> existing = salaryCalcRepo.findByEpfNoAndPlantAndYearAndMonthAndBusinessCenter(
+                    epf, plant, yr, mo, businessCenter);
             if (existing.isPresent()) {
                 SalaryCalculation old = existing.get();
                 old.setEmployeeName(row.getEmployeeName());
+                old.setBusinessCenter(row.getBusinessCenter());
                 old.setDaysWorked(row.getDaysWorked());
                 old.setOtHours(row.getOtHours());
                 old.setBasicSalary(row.getBasicSalary());
@@ -271,16 +320,24 @@ public class ExcelStyleSalaryService {
         return results;
     }
 
-    public List<SalaryCalculation> getCalculatedSalary(String year, String month, String plant) {
+    public List<SalaryCalculation> getCalculatedSalary(String year, String month, String plant, String businessCenter) {
+        List<SalaryCalculation> records;
         if (year != null && !year.isBlank() && month != null && !month.isBlank()) {
             String mo = String.format("%02d", Integer.parseInt(month.trim()));
             if (plant != null && !plant.isBlank() && !"ALL".equalsIgnoreCase(plant.trim())) {
-                return salaryCalcRepo.findByYearAndMonthAndPlant(year.trim(), mo, plant.trim());
+                records = salaryCalcRepo.findByYearAndMonthAndPlant(year.trim(), mo, plant.trim());
+            } else {
+                records = salaryCalcRepo.findByYearAndMonth(year.trim(), mo);
             }
-            return salaryCalcRepo.findByYearAndMonth(year.trim(), mo);
         } else if (plant != null && !plant.isBlank() && !"ALL".equalsIgnoreCase(plant.trim())) {
-            return salaryCalcRepo.findByPlant(plant.trim());
+            records = salaryCalcRepo.findByPlant(plant.trim());
+        } else {
+            records = salaryCalcRepo.findAll();
         }
-        return salaryCalcRepo.findAll();
+        if (businessCenter == null || businessCenter.isBlank() || "ALL".equalsIgnoreCase(businessCenter.trim())) {
+            return records;
+        }
+        return records.stream().filter(record -> businessCenter.equalsIgnoreCase(
+                record.getBusinessCenter() == null ? "" : record.getBusinessCenter().trim())).toList();
     }
 }

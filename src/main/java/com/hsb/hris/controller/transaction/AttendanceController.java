@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -21,11 +23,15 @@ public class AttendanceController {
     private final AttendanceService service;
     private final AttendanceRepository attendanceRepository;
     private final com.hsb.hris.repository.EmployeeRepository employeeRepository;
+    private final JdbcTemplate jdbcTemplate;
 
-    public AttendanceController(AttendanceService service, AttendanceRepository attendanceRepository, com.hsb.hris.repository.EmployeeRepository employeeRepository) {
+    public AttendanceController(AttendanceService service, AttendanceRepository attendanceRepository,
+                                com.hsb.hris.repository.EmployeeRepository employeeRepository,
+                                JdbcTemplate jdbcTemplate) {
         this.service = service;
         this.attendanceRepository = attendanceRepository;
         this.employeeRepository = employeeRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @GetMapping
@@ -125,6 +131,8 @@ public class AttendanceController {
             existing.setStatutoryHolidays(attendance.getStatutoryHolidays());
             existing.setSundayPoyaExtra(attendance.getSundayPoyaExtra());
             existing.setBusinessCenter(attendance.getBusinessCenter());
+            existing.setSectionCode(attendance.getSectionCode());
+            existing.setCustomerCode(attendance.getCustomerCode());
             if (attendance.getEmployeeName() != null && !attendance.getEmployeeName().isBlank()) {
                 existing.setEmployeeName(attendance.getEmployeeName());
             }
@@ -173,21 +181,24 @@ public class AttendanceController {
         if (records == null || records.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "No attendance records provided for saving."));
         }
+        if (records.stream().anyMatch(java.util.Objects::isNull)) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Attendance records must not contain null rows."));
+        }
 
-        // Cache employee names for instant resolution
+        // Cache employee records for validation and auto-populating plant, business center, etc.
+        Map<String, com.hsb.hris.entity.Employee> empMap = new java.util.HashMap<>();
         Map<String, String> empNameMap = new java.util.HashMap<>();
-        try {
-            for (com.hsb.hris.entity.Employee emp : employeeRepository.findAll()) {
-                if (emp.getEpfNo() != null) {
-                    String fullName = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " " +
-                                       (emp.getLastName() == null ? "" : emp.getLastName())).trim();
-                    empNameMap.put(emp.getEpfNo().trim().toUpperCase(), fullName);
-                }
+        for (com.hsb.hris.entity.Employee emp : employeeRepository.findAll()) {
+            if (emp.getEpfNo() != null) {
+                String epfUpper = emp.getEpfNo().trim().toUpperCase();
+                empMap.put(epfUpper, emp);
+                String fullName = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " " +
+                                   (emp.getLastName() == null ? "" : emp.getLastName())).trim();
+                empNameMap.put(epfUpper, fullName);
             }
-        } catch (Exception ignored) {}
+        }
 
-        // Group rows by Plant, Year, and Month
-        // Key: PlantCode|Year|Month
+        // Pre-process rows: auto-fill dates, plant, business center, employee name from Employee master
         Map<String, List<Attendance>> grouped = new java.util.LinkedHashMap<>();
         for (Attendance a : records) {
             if (a.getDayIn() != null) {
@@ -202,17 +213,50 @@ public class AttendanceController {
                 a.setAttMonth(String.format("%02d", Integer.parseInt(a.getAttMonth().trim())));
             }
 
-            // Populate Employee Name
-            if ((a.getEmployeeName() == null || a.getEmployeeName().isBlank()) && a.getEpfNo() != null) {
-                String resolvedName = empNameMap.get(a.getEpfNo().trim().toUpperCase());
+            String epfKey = a.getEpfNo() == null ? "" : a.getEpfNo().trim().toUpperCase();
+            com.hsb.hris.entity.Employee empRecord = empMap.get(epfKey);
+
+            // Populate Employee Name from employee master
+            if ((a.getEmployeeName() == null || a.getEmployeeName().isBlank()) && empRecord != null) {
+                String resolvedName = empNameMap.get(epfKey);
                 if (resolvedName != null && !resolvedName.isBlank()) {
                     a.setEmployeeName(resolvedName);
                 }
             }
 
-            String plant = (a.getPlantCode() != null && !a.getPlantCode().isBlank()) ? a.getPlantCode().trim() : "DEFAULT";
-            String yr = (a.getAttYear() != null && !a.getAttYear().isBlank()) ? a.getAttYear().trim() : "2026";
-            String mo = (a.getAttMonth() != null && !a.getAttMonth().isBlank()) ? a.getAttMonth().trim() : "01";
+            // Auto-populate Plant Code from employee master if missing
+            if ((a.getPlantCode() == null || a.getPlantCode().isBlank()) && empRecord != null && empRecord.getPlantCode() != null) {
+                String cleanPlant = empRecord.getPlantCode().split(" ")[0].trim();
+                a.setPlantCode(cleanPlant);
+                if (a.getCustomerCode() == null || a.getCustomerCode().isBlank()) {
+                    a.setCustomerCode(cleanPlant);
+                }
+            }
+
+            // Auto-populate Section Code from employee master if missing
+            if ((a.getSectionCode() == null || a.getSectionCode().isBlank()) && empRecord != null && empRecord.getSectionCode() != null) {
+                a.setSectionCode(empRecord.getSectionCode().trim());
+            }
+
+            // Auto-populate Business Center from employee master if missing
+            if ((a.getBusinessCenter() == null || a.getBusinessCenter().isBlank()) && empRecord != null && empRecord.getBusinessCenter() != null) {
+                a.setBusinessCenter(empRecord.getBusinessCenter().trim());
+            }
+
+            // Default timeIn / timeOut if missing
+            if (a.getTimeIn() == null) {
+                a.setTimeIn(java.time.LocalTime.of(8, 0));
+            }
+            if (a.getTimeOut() == null) {
+                a.setTimeOut(java.time.LocalTime.of(16, 0));
+            }
+            if (a.getWorkingDays() == null || a.getWorkingDays() == 0) {
+                a.setWorkingDays(1.0);
+            }
+
+            String plant = a.getPlantCode() == null ? "" : a.getPlantCode().trim();
+            String yr = a.getAttYear() == null ? "" : a.getAttYear().trim();
+            String mo = a.getAttMonth() == null ? "" : a.getAttMonth().trim();
             String groupKey = plant + "|" + yr + "|" + mo;
 
             grouped.computeIfAbsent(groupKey, k -> new java.util.ArrayList<>()).add(a);
@@ -235,12 +279,41 @@ public class AttendanceController {
             int updated = 0;
             int failed = 0;
             java.util.Set<String> distinctEpfs = new java.util.HashSet<>();
+            java.util.Set<String> seenKeys = new java.util.HashSet<>();
+            List<String> rowErrors = new java.util.ArrayList<>();
 
             for (Attendance a : groupRows) {
                 if (a.getEpfNo() != null) distinctEpfs.add(a.getEpfNo().trim().toUpperCase());
+                String epfNo = a.getEpfNo() == null ? "" : a.getEpfNo().trim();
+                String validationError = null;
+                if (epfNo.isBlank()) {
+                    validationError = "EPF No is required.";
+                } else if (!empNameMap.containsKey(epfNo.toUpperCase())) {
+                    validationError = "Unknown EPF No: " + epfNo;
+                } else if (a.getDayIn() == null) {
+                    validationError = "Attendance date is required.";
+                } else if (a.getPlantCode() == null || a.getPlantCode().isBlank()) {
+                    validationError = "Plant code is required.";
+                } else if (a.getBusinessCenter() == null || a.getBusinessCenter().isBlank()) {
+                    validationError = "Business center is required.";
+                } else if (a.getTimeIn() == null) {
+                    validationError = "Time in is required.";
+                } else if (!String.valueOf(a.getDayIn().getYear()).equals(a.getAttYear())
+                        || !String.format("%02d", a.getDayIn().getMonthValue()).equals(a.getAttMonth())) {
+                    validationError = "Attendance year and month must match the attendance date.";
+                }
+                String uniqueKey = epfNo.toUpperCase() + "|" + a.getDayIn();
+                if (validationError == null && !seenKeys.add(uniqueKey)) {
+                    validationError = "Duplicate employee and date in this upload.";
+                }
+                if (validationError != null) {
+                    failed++;
+                    rowErrors.add(validationError);
+                    continue;
+                }
                 try {
                     com.hsb.hris.entity.id.AttendanceId id = new com.hsb.hris.entity.id.AttendanceId(
-                        a.getAttYear().trim(), a.getAttMonth().trim(), a.getEpfNo().trim(), a.getDayIn()
+                        a.getAttYear().trim(), a.getAttMonth().trim(), epfNo, a.getDayIn()
                     );
                     Attendance existing = attendanceRepository.findById(id).orElse(null);
                     if (existing != null) {
@@ -274,6 +347,8 @@ public class AttendanceController {
                         existing.setStatutoryHolidays(a.getStatutoryHolidays());
                         existing.setSundayPoyaExtra(a.getSundayPoyaExtra());
                         existing.setBusinessCenter(a.getBusinessCenter());
+                        existing.setSectionCode(a.getSectionCode());
+                        existing.setCustomerCode(a.getCustomerCode());
                         if (a.getEmployeeName() != null && !a.getEmployeeName().isBlank()) {
                             existing.setEmployeeName(a.getEmployeeName());
                         }
@@ -288,6 +363,7 @@ public class AttendanceController {
                     }
                 } catch (Exception ex) {
                     failed++;
+                    rowErrors.add("Unable to save attendance for EPF No " + epfNo + " on " + a.getDayIn() + ".");
                 }
             }
 
@@ -308,12 +384,13 @@ public class AttendanceController {
             groupSummary.put("inserted", inserted);
             groupSummary.put("updated", updated);
             groupSummary.put("failed", failed);
+            groupSummary.put("errors", rowErrors);
             groupSummary.put("message", summaryMsg);
             summaries.add(groupSummary);
         }
 
         Map<String, Object> response = new java.util.LinkedHashMap<>();
-        response.put("status", "success");
+        response.put("status", grandFailed > 0 ? "partial" : "success");
         response.put("totalSaved", grandInserted + grandUpdated);
         response.put("inserted", grandInserted);
         response.put("updated", grandUpdated);
@@ -329,6 +406,44 @@ public class AttendanceController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/plant-range")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> updatePlantRange(@RequestBody PlantRangeRequest request) {
+        if (request.epfNo() == null || request.epfNo().isBlank()
+                || request.fromDate() == null || request.toDate() == null
+                || request.plantCode() == null || request.plantCode().isBlank()
+                || request.businessCenter() == null || request.businessCenter().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "EPF, date range, plant, and business center are required.");
+        }
+        if (request.fromDate().isAfter(request.toDate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "From date must not be after to date.");
+        }
+
+        Integer overlapping = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM dbo.TBL_Attendance_Plant_Range " +
+                        "WHERE EPF_No = ? AND Business_Center = ? AND From_Date <= ? AND To_Date >= ?",
+                Integer.class, request.epfNo().trim(), request.businessCenter().trim(),
+                request.toDate(), request.fromDate());
+        if (overlapping != null && overlapping > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "An attendance plant range already overlaps these dates.");
+        }
+
+        jdbcTemplate.update(
+                "INSERT INTO dbo.TBL_Attendance_Plant_Range (EPF_No, Business_Center, From_Date, To_Date, Plant_Code, Section_Code) " +
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                request.epfNo().trim(), request.businessCenter().trim(), request.fromDate(), request.toDate(),
+                request.plantCode().trim(), request.sectionCode());
+        int updatedRows = jdbcTemplate.update(
+                "UPDATE dbo.TBL_T_Attendance SET Plant_Code = ?, Section_Code = ?, Customer_Code = ? " +
+                        "WHERE EPF_No = ? AND Business_Center = ? AND Day_in BETWEEN ? AND ?",
+                request.plantCode().trim(), request.sectionCode(), request.plantCode().trim(),
+                request.epfNo().trim(), request.businessCenter().trim(), request.fromDate(), request.toDate());
+        return ResponseEntity.ok(Map.of("updatedRows", updatedRows));
+    }
+
+    public record PlantRangeRequest(String epfNo, java.time.LocalDate fromDate, java.time.LocalDate toDate,
+                                    String plantCode, String sectionCode, String businessCenter) {}
 
     @PostMapping("/auto-update")
     public ResponseEntity<Map<String, Object>> autoUpdate(@RequestParam String year, @RequestParam String month,

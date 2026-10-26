@@ -118,13 +118,23 @@ public class Attendance {
     @Column(name = "Business_Center", length = 100, nullable = false)
     private String businessCenter;
 
-    @Column(name = "Employee_Name", length = 100)
+    @Column(name = "Section_Code", length = 10)
+    private String sectionCode;
+
+    @Column(name = "Customer_Code", length = 50)
+    private String customerCode;
+
+    @Column(name = "Employee_Name", length = 200)
     private String employeeName;
 
     // --- getters and setters ---
 
     public String getEmployeeName() { return employeeName; }
     public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
+    public String getSectionCode() { return sectionCode; }
+    public void setSectionCode(String sectionCode) { this.sectionCode = sectionCode; }
+    public String getCustomerCode() { return customerCode; }
+    public void setCustomerCode(String customerCode) { this.customerCode = customerCode; }
 
     public String getAttYear() { return attYear; }
     public void setAttYear(String attYear) { this.attYear = attYear; }

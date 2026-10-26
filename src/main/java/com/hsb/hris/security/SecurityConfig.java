@@ -3,6 +3,7 @@ package com.hsb.hris.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -10,23 +11,28 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.Arrays;
 
 @Configuration
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final String corsOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          @Value("${cors.origins:http://localhost:5173,https://hris.process361.com}") String corsOrigins) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.corsOrigins = corsOrigins;
     }
 
     @Bean
@@ -41,20 +47,17 @@ public class SecurityConfig {
                 .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    AntPathRequestMatcher.antMatcher("/"),
-                    AntPathRequestMatcher.antMatcher("/error"),
                     AntPathRequestMatcher.antMatcher("/api/auth/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.OPTIONS, "/**"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/business-centers"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/business-centers/**"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/master/business-centers"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/master/business-centers/**"),
-                    AntPathRequestMatcher.antMatcher("/actuator/health"),
-                    AntPathRequestMatcher.antMatcher("/v3/api-docs/**"),
-                    AntPathRequestMatcher.antMatcher("/swagger-ui/**"),
-                    AntPathRequestMatcher.antMatcher("/swagger-ui.html")
+                    AntPathRequestMatcher.antMatcher("/api/health"),
+                    // Allow GET /api/business-centers publicly so the login page
+                    // can populate the Business Center dropdown before authentication
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/business-centers")
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -66,7 +69,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        List<String> origins = Arrays.stream(corsOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
         config.setExposedHeaders(List.of("Authorization"));

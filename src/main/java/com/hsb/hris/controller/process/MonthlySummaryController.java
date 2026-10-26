@@ -325,8 +325,10 @@ public class MonthlySummaryController {
         }
 
         if (plantDaysMap.isEmpty()) {
-            String defaultPlant = employee.getPlantCode() == null || employee.getPlantCode().isBlank() ? "PL001" : employee.getPlantCode().trim();
-            plantDaysMap.put(defaultPlant, Math.round(workingDays));
+            String employeePlant = employee.getPlantCode() == null ? "" : employee.getPlantCode().trim();
+            if (!employeePlant.isEmpty() && workingDays > 0) {
+                plantDaysMap.put(employeePlant, Math.round(workingDays));
+            }
         }
 
         Map<String, Plant> plantMasterMap = plantRepo.findAll().stream()
@@ -360,6 +362,9 @@ public class MonthlySummaryController {
         for (Employee emp : allEmps) {
             String epf = emp.getEpfNo() != null ? emp.getEpfNo().trim() : "";
             if (epf.isEmpty()) continue;
+            String plantCode = emp.getPlantCode() == null ? "" : emp.getPlantCode().trim();
+            String businessCenter = emp.getBusinessCenter() == null ? "" : emp.getBusinessCenter().trim();
+            if (plantCode.isEmpty() || businessCenter.isEmpty()) continue;
 
             List<Attendance> attList = attendanceRepo.findByEpfNoAndAttYearAndAttMonth(epf, yr, mo);
             double empPresentDays = 0;
@@ -377,8 +382,8 @@ public class MonthlySummaryController {
             summary.setEpfNo(epf);
             String fullName = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " " + (emp.getLastName() == null ? "" : emp.getLastName())).trim();
             summary.setEmpName(fullName.isEmpty() ? epf : fullName);
-            summary.setPlantCode(emp.getPlantCode() != null && !emp.getPlantCode().isBlank() ? emp.getPlantCode().trim() : "PL001");
-            summary.setBusinessCenter(emp.getBusinessCenter() != null && !emp.getBusinessCenter().isBlank() ? emp.getBusinessCenter().trim() : "001");
+            summary.setPlantCode(plantCode);
+            summary.setBusinessCenter(businessCenter);
             double basicSal = emp.getBasicSalary() != null ? emp.getBasicSalary() : 0.0;
             if (emp.getSectionCode() != null && !emp.getSectionCode().trim().isEmpty()) {
                 String sCode = emp.getSectionCode().trim();

@@ -35,103 +35,29 @@ public class AuthServiceImpl implements AuthService {
                 : rawLoginName;
         String password = req.password;
 
-        try {
-            // ── 1. Dedicated Superadmin Authentication ──
-            if ("superadmin".equalsIgnoreCase(loginName)) {
-                boolean isSuperAdminValid = false;
+        LoginUser user = repo.findByLoginName(loginName).orElse(null);
+        if (user == null && !loginName.equals(rawLoginName)) {
+            user = repo.findByLoginName(rawLoginName).orElse(null);
+        }
 
-                // Check in database first
-                LoginUser dbSuperAdmin = repo.findByLoginName("superadmin").orElse(null);
-                if (dbSuperAdmin != null) {
-                    if (!dbSuperAdmin.isBlocked()
-                            && (passwordEncoder.matches(password, dbSuperAdmin.getPassword().trim())
-                            || dbSuperAdmin.getPassword().trim().equals(password))) {
-                        isSuperAdminValid = true;
-                    }
-                }
-                
-                // Fallback / default superadmin credential (123)
-                if (!isSuperAdminValid && ("123".equals(password) || "admin123".equals(password))) {
-                    isSuperAdminValid = true;
-                    // Attempt to sync to DB if missing
-                    if (dbSuperAdmin == null) {
-                        try {
-                            LoginUser newSuperAdmin = new LoginUser();
-                            newSuperAdmin.setLoginName("superadmin");
-                            newSuperAdmin.setPassword(passwordEncoder.encode("123"));
-                            newSuperAdmin.setClientBusinessCode("ALL");
-                            repo.save(newSuperAdmin);
-                        } catch (Exception ignored) {}
-                    }
-                }
+        if (user != null && user.isBlocked()) {
+            resp.message = "Your account has been blocked. Please contact a Super Admin.";
+            return resp;
+        }
 
-                if (isSuperAdminValid) {
-                    String token = jwtUtil.generateToken("superadmin", "SUPERADMIN");
-                    resp.token = token;
-                    resp.loginName = "superadmin";
-                    resp.clientBusinessCode = (req.clientBusinessCode != null && !req.clientBusinessCode.isBlank()) ? req.clientBusinessCode : "ALL";
-                    resp.fullName = dbSuperAdmin == null ? "Super Admin" : dbSuperAdmin.getFullName();
-                    resp.nicNumber = dbSuperAdmin == null ? null : dbSuperAdmin.getNicNumber();
-                    resp.role = "SUPERADMIN";
-                    resp.canViewSite = true;
-                    resp.accessLevel = "READ_WRITE";
-                    resp.canManageUsers = true;
-                    return resp;
-                } else {
-                    resp.message = "Invalid superadmin credentials";
-                    return resp;
-                }
-            }
+        if (user == null) {
+            resp.message = "Invalid username or password";
+            return resp;
+        }
 
-            // ── 2. Standard Admin User Authentication ──
-            LoginUser user = repo.findByLoginName(loginName).orElse(null);
-            if (user == null) {
-                user = repo.findByLoginName(rawLoginName).orElse(null);
-            }
+        String storedPassword = user.getPassword() == null ? "" : user.getPassword().trim();
+        boolean validPassword = passwordEncoder.matches(password, storedPassword)
+                || storedPassword.equals(password);
 
-            if (user != null && user.isBlocked()) {
-                resp.message = "Your account has been blocked. Please contact a Super Admin.";
-                return resp;
-            }
-
-            if (user == null) {
-                // If the user table is empty, allow default admin / admin or admin / Tharindu123@ fallback
-                if ("admin".equalsIgnoreCase(loginName) && ("admin".equals(password) || "123".equals(password) || "Test1234!".equals(password))) {
-                    String token = jwtUtil.generateToken(loginName, "ADMIN");
-                    resp.token = token;
-                    resp.loginName = loginName;
-                    resp.clientBusinessCode = req.clientBusinessCode != null && !req.clientBusinessCode.isBlank() ? req.clientBusinessCode : "001";
-                    resp.role = "ADMIN";
-                    resp.canViewSite = true;
-                    resp.accessLevel = "READ_WRITE";
-                    return resp;
-                }
-                resp.message = "Invalid username or password";
-                return resp;
-            }
-
-            // Validate password against hash or plain text
-            String storedPassword = user.getPassword() == null ? "" : user.getPassword().trim();
-            
-            System.out.println("[AUTH-DEBUG] raw input password: [" + password + "]");
-            System.out.println("[AUTH-DEBUG] stored hash: [" + storedPassword + "] len=" + storedPassword.length());
-            
-            boolean validPassword = passwordEncoder.matches(password, storedPassword);
-            
-            System.out.println("[AUTH-DEBUG] passwordEncoder.matches result: " + validPassword);
-
-            if (!validPassword && storedPassword.equals(password)) {
-                try {
-                    user.setPassword(passwordEncoder.encode(password));
-                    repo.save(user);
-                } catch (Exception ignored) {}
-                validPassword = true;
-            }
-
-            if (!validPassword) {
-                resp.message = "Invalid username or password";
-                return resp;
-            }
+        if (!validPassword) {
+            resp.message = "Invalid username or password";
+            return resp;
+        }
 
             String role = user.getRole() != null ? user.getRole() : "ADMIN";
             boolean isSuperAdminRole = "SUPERADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role);
@@ -169,12 +95,6 @@ public class AuthServiceImpl implements AuthService {
                     resp.modulePermissions = user.getModulePermissions();
                 }
             }
-            return resp;
-
-        } catch (Exception e) {
-            System.err.println("Error during authentication: " + e.getMessage());
-            resp.message = "Authentication failed: " + e.getMessage();
-            return resp;
-        }
+        return resp;
     }
 }
