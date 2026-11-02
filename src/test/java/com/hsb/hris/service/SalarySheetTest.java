@@ -185,6 +185,36 @@ class SalarySheetTest {
     }
 
     @Test
+    void employeeWithDeductionButNoAttendanceIsMarkedAndAttendedOneIsNot() {
+        deduction("23", 300);
+        assertEquals(false, sheet().get(0).hasAttendance);
+
+        worked("P01", 1, 1, false, false, null, 0);
+        assertEquals(true, sheet().get(0).hasAttendance);
+    }
+
+    @Test
+    void businessCenterUsesTheSameMatchingAsTheAttendanceReport() {
+        List<Employee> centerEmployees = employees.findAll();
+        when(employees.findByBusinessCenterSmart("B001")).thenReturn(centerEmployees);
+        worked("P01", 1, 1, false, false, null, 0);
+        rows.get(0).setAttYear("2024");
+        rows.get(0).setAttMonth("12");
+        rows.get(0).setBusinessCenter("B001 / Shinex");
+        Attendance otherMonth = new Attendance();
+        otherMonth.setEpfNo("E72");
+        otherMonth.setPlantCode("P01");
+        otherMonth.setAttYear("2024");
+        otherMonth.setAttMonth("11");
+        when(attendance.findByBusinessCenterSmart("B001")).thenReturn(List.of(rows.get(0), otherMonth));
+
+        SalarySheetRow r = service.buildSalarySheet("2024", "12", null, "B001").get(0);
+
+        assertEquals(1.0, r.shift1Days);
+        assertEquals(true, r.hasAttendance);
+    }
+
+    @Test
     void numericDeductionCodesGoToTheRightColumns() {
         worked("P01", 1, 1, false, false, null, 0);
         deduction("05", 5000);

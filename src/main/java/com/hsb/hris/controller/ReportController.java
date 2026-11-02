@@ -77,7 +77,7 @@ public class ReportController {
         return rows.stream()
                 .filter(row -> year.trim().equals(trim(row.getAttYear())))
                 .filter(row -> cleanMonth.equals(trim(row.getAttMonth())))
-                .filter(row -> matches(row.getPlantCode(), plant) || matches(row.getCustomerCode(), plant))
+                .filter(row -> matches(row.getPlantCode() == null || row.getPlantCode().isBlank() ? row.getCustomerCode() : row.getPlantCode(), plant))
                 .toList();
     }
 
@@ -332,7 +332,7 @@ public class ReportController {
             @RequestParam(required = false) String plant) {
         Map<String, String> plantNames = plantNameMap();
         return salaryService.buildSalarySheet(year, month, plant, businessCenter).stream()
-                .filter(SalarySheetRow::hasValues)
+                .filter(row -> row.hasAttendance)
                 .peek(row -> row.plantName = plantNames.getOrDefault(row.plantCode.toUpperCase(), row.plantCode))
                 .toList();
     }

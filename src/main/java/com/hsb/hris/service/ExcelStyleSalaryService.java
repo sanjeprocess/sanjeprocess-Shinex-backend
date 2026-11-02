@@ -203,9 +203,12 @@ public class ExcelStyleSalaryService {
         String mo = String.format("%02d", Integer.parseInt(month.trim()));
         boolean allCenters = businessCenterFilter == null || businessCenterFilter.isBlank() || "ALL".equalsIgnoreCase(businessCenterFilter.trim());
 
-        List<Attendance> attendanceRecords = attendanceRepo.findByAttYearAndAttMonth(yr, mo).stream()
-                .filter(a -> allCenters || (a.getBusinessCenter() != null && a.getBusinessCenter().trim().equalsIgnoreCase(businessCenterFilter.trim())))
-                .toList();
+        // Same business center matching as the attendance report (code, "code / name", or the employee's center)
+        List<Attendance> attendanceRecords = allCenters
+                ? attendanceRepo.findByAttYearAndAttMonth(yr, mo)
+                : attendanceRepo.findByBusinessCenterSmart(businessCenterFilter.trim()).stream()
+                        .filter(a -> yr.equals(trim(a.getAttYear())) && mo.equals(trim(a.getAttMonth())))
+                        .toList();
 
         // Load ALL employees for the selected business center (fix: include employees with 0 attendance)
         List<Employee> filteredEmployees = allCenters ? employeeRepo.findAll() : employeeRepo.findByBusinessCenterSmart(businessCenterFilter.trim());
@@ -382,6 +385,7 @@ public class ExcelStyleSalaryService {
 
             SalarySheetRow row = new SalarySheetRow();
             row.calculation = calc;
+            row.hasAttendance = !attList.isEmpty();
             row.epfNo = emp != null ? emp.getEpfNo().trim() : epf;
             row.employeeName = empName;
             row.nicNo = emp != null ? trim(emp.getNicNo()) : "";
@@ -498,11 +502,9 @@ public class ExcelStyleSalaryService {
         public double loan;
         public double totalDeductions;
         public double netSalary;
-
+        // The printed reports list only employees with attendance this month
         @com.fasterxml.jackson.annotation.JsonIgnore
-        public boolean hasValues() {
-            return grossSalary != 0 || totalDeductions != 0;
-        }
+        public boolean hasAttendance;
     }
 
     public List<SalaryCalculation> getCalculatedSalary(String year, String month, String plant, String businessCenter) {
