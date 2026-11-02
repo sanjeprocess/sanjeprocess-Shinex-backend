@@ -1,5 +1,6 @@
 package com.hsb.hris.controller.master;
 
+import com.hsb.hris.security.BusinessCenterScope;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,12 +33,15 @@ public abstract class GenericMasterController<T, ID> {
 
     @PutMapping("/{id}")
     public ResponseEntity<T> update(@PathVariable ID id, @RequestBody T entity) {
-        if (!repo.existsById(id)) return ResponseEntity.notFound().build();
+        Optional<T> existing = repo.findById(id);
+        if (existing.isEmpty()) return ResponseEntity.notFound().build();
+        BusinessCenterScope.assertVisible(existing.get());
         return ResponseEntity.ok(repo.save(entity));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable ID id) {
+        repo.findById(normalizeId(id)).ifPresent(BusinessCenterScope::assertVisible);
         repo.deleteById(normalizeId(id));
         return ResponseEntity.noContent().build();
     }

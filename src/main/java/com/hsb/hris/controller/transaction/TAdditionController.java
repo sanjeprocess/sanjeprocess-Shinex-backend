@@ -1,5 +1,7 @@
 package com.hsb.hris.controller.transaction;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.entity.TAddition;
 import com.hsb.hris.entity.id.TAdditionId;
 import com.hsb.hris.repository.TAdditionRepository;
@@ -33,6 +35,7 @@ public class TAdditionController extends GenericMasterController<TAddition, TAdd
     public ResponseEntity<TAddition> update(@PathVariable String epfNo,
                                            @PathVariable String addCode,
                                            @RequestBody TAddition entity) {
+        BusinessCenterScope.assertEmployee(epfNo);
         TAdditionId id = new TAdditionId(epfNo, addCode);
         return repo.findById(id).map(existing -> {
             existing.setBusinessCenter(entity.getBusinessCenter());
@@ -46,6 +49,7 @@ public class TAdditionController extends GenericMasterController<TAddition, TAdd
 
     @DeleteMapping("/{epfNo}/{addCode}")
     public ResponseEntity<Void> delete(@PathVariable String epfNo, @PathVariable String addCode) {
+        BusinessCenterScope.assertEmployee(epfNo);
         TAdditionId id = new TAdditionId(epfNo, addCode);
         if (!repo.existsById(id)) {
             return ResponseEntity.notFound().build();

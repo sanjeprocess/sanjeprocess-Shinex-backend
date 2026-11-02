@@ -1,8 +1,13 @@
 package com.hsb.hris.controller.master;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.entity.BusinessCenter;
 import com.hsb.hris.service.master.BusinessCenterService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +24,18 @@ public class BusinessCenterController {
     public BusinessCenterController(BusinessCenterService service) { this.service = service; }
 
     @GetMapping
-    public List<BusinessCenter> list() { return service.findAll(); }
+    public List<BusinessCenter> list() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean signedIn = auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken);
+        if (signedIn) return service.findAll();
+        // The login page is public: code and name only
+        return service.findAll().stream().map(center -> {
+            BusinessCenter shown = new BusinessCenter();
+            shown.setCompanyId(center.getCompanyId());
+            shown.setCompanyName(center.getCompanyName());
+            return shown;
+        }).toList();
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<BusinessCenter> get(@PathVariable String id) {
@@ -28,6 +44,7 @@ public class BusinessCenterController {
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody BusinessCenter bc) {
+        BusinessCenterScope.assertNotRestricted();
         try {
             return ResponseEntity.ok(service.save(normalize(bc)));
         } catch (RuntimeException ex) {
@@ -38,6 +55,7 @@ public class BusinessCenterController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable String id, @RequestBody BusinessCenter bc) {
+        if (!BusinessCenterScope.allows(id)) throw BusinessCenterScope.forbidden();
         return service.findById(id).map(existing -> {
             bc.setCompanyId(id);
             try {
@@ -80,6 +98,7 @@ public class BusinessCenterController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        BusinessCenterScope.assertNotRestricted();
         service.deleteById(id.trim());
         return ResponseEntity.noContent().build();
     }

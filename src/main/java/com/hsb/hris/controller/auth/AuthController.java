@@ -22,6 +22,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
         AuthDtos.LoginResponse resp = authService.login(req);
+        if (AuthDtos.CENTER_NOT_ALLOWED.equals(resp.message)) return ResponseEntity.status(403).body(resp);
         if (resp.token == null) return ResponseEntity.status(401).body(resp);
         return ResponseEntity.ok(resp);
     }

@@ -1,5 +1,7 @@
 package com.hsb.hris.controller.transaction;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.entity.Attendance;
 import com.hsb.hris.repository.AttendanceRepository;
 import com.hsb.hris.service.transaction.AttendanceService;
@@ -89,6 +91,7 @@ public class AttendanceController {
                                         @PathVariable String month,
                                         @PathVariable String epfNo,
                                         @PathVariable LocalDate dayIn) {
+        BusinessCenterScope.assertEmployee(epfNo);
         return attendanceRepository.findById(new com.hsb.hris.entity.id.AttendanceId(year, month, epfNo, dayIn))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -100,6 +103,7 @@ public class AttendanceController {
                                            @PathVariable String epfNo,
                                            @PathVariable LocalDate dayIn,
                                            @RequestBody Attendance attendance) {
+        BusinessCenterScope.assertEmployee(epfNo);
         com.hsb.hris.entity.id.AttendanceId id = new com.hsb.hris.entity.id.AttendanceId(year.trim(), month.trim(), epfNo.trim(), dayIn);
         return attendanceRepository.findById(id).map(existing -> {
             existing.setPlantCode(attendance.getPlantCode());
@@ -146,6 +150,7 @@ public class AttendanceController {
                                       @PathVariable String month,
                                       @PathVariable String epfNo,
                                       @PathVariable LocalDate dayIn) {
+        BusinessCenterScope.assertEmployee(epfNo);
         com.hsb.hris.entity.id.AttendanceId id = new com.hsb.hris.entity.id.AttendanceId(year, month, epfNo, dayIn);
         if (!attendanceRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
@@ -159,6 +164,7 @@ public class AttendanceController {
             @PathVariable String epfNo,
             @RequestParam(value = "year", required = false) String year,
             @RequestParam(value = "month", required = false) String month) {
+        BusinessCenterScope.assertEmployee(epfNo);
         List<Attendance> records = new java.util.ArrayList<>();
         if (year != null && !year.isBlank() && month != null && !month.isBlank()) {
             records = attendanceRepository.findByEpfNoAndAttYearAndAttMonth(epfNo, year, month);
@@ -230,7 +236,7 @@ public class AttendanceController {
 
             // Auto-populate Plant Code from employee master if missing
             if ((a.getPlantCode() == null || a.getPlantCode().isBlank()) && empRecord != null && empRecord.getPlantCode() != null) {
-                String cleanPlant = empRecord.getPlantCode().split(" ")[0].trim();
+                String cleanPlant = empRecord.getPlantCode().split("/")[0].trim();
                 a.setPlantCode(cleanPlant);
                 if (a.getCustomerCode() == null || a.getCustomerCode().isBlank()) {
                     a.setCustomerCode(cleanPlant);

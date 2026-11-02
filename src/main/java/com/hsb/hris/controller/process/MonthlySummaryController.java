@@ -3,6 +3,7 @@ package com.hsb.hris.controller.process;
 import com.hsb.hris.entity.*;
 import com.hsb.hris.entity.id.AttSummaryId;
 import com.hsb.hris.repository.*;
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.service.transaction.StatutoryHolidayService;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,6 +41,7 @@ public class MonthlySummaryController {
     @GetMapping
     public Map<String, Object> summary(@RequestParam String epfNo, @RequestParam String year,
                                        @RequestParam String month) {
+        BusinessCenterScope.assertEmployee(epfNo);
         String epf = epfNo.trim(), yr = year.trim(), mo = String.format("%02d", Integer.parseInt(month.trim()));
         Employee employee = employees.findByTrimmedEpfNo(epf).orElseThrow();
         Map<String, Object> result = new LinkedHashMap<>();
@@ -365,7 +367,7 @@ public class MonthlySummaryController {
     public Map<String, Object> syncMonthlySummary(@RequestParam String year, @RequestParam String month) {
         String yr = year.trim();
         String mo = String.format("%02d", Integer.parseInt(month.trim()));
-        List<Employee> allEmps = employees.findAll();
+        List<Employee> allEmps = employees.findAll().stream().filter(BusinessCenterScope::isVisible).toList();
         int count = 0;
         double totalDays = 0;
         double totalOt = 0;

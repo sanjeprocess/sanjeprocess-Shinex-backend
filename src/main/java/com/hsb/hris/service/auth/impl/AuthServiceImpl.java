@@ -1,7 +1,10 @@
 package com.hsb.hris.service.auth.impl;
 
 import com.hsb.hris.dto.AuthDtos;
+import com.hsb.hris.entity.BusinessCenter;
 import com.hsb.hris.entity.LoginUser;
+import com.hsb.hris.repository.BusinessCenterRepository;
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.repository.LoginUserRepository;
 import com.hsb.hris.security.JwtUtil;
 import com.hsb.hris.service.auth.AuthService;
@@ -14,11 +17,24 @@ public class AuthServiceImpl implements AuthService {
     private final LoginUserRepository repo;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final BusinessCenterRepository centers;
 
-    public AuthServiceImpl(LoginUserRepository repo, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
+    public AuthServiceImpl(LoginUserRepository repo, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, BusinessCenterRepository centers) {
         this.repo = repo;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
+        this.centers = centers;
+    }
+
+    // The selected center must be the account's own; the account may hold its code or its name
+    private boolean isOwnCenter(String assigned, String selected) {
+        if (selected == null || selected.isBlank()) return false;
+        if (BusinessCenterScope.sameCenter(assigned, selected)) return true;
+        String assignedCode = BusinessCenterScope.codeOf(assigned);
+        return centers.findById(BusinessCenterScope.codeOf(selected))
+                .map(BusinessCenter::getCompanyName)
+                .filter(name -> name != null && name.trim().equalsIgnoreCase(assignedCode))
+                .isPresent();
     }
 
     @Override
@@ -65,12 +81,8 @@ public class AuthServiceImpl implements AuthService {
             // Scope verification: non-superadmin users assigned to a specific Business Center cannot log into other Business Centers
             String assignedBc = user.getClientBusinessCode() != null ? user.getClientBusinessCode().trim() : "";
             if (!isSuperAdminRole && !assignedBc.isEmpty() && !"ALL".equalsIgnoreCase(assignedBc)) {
-                String requestedBc = req.clientBusinessCode != null ? req.clientBusinessCode.trim() : "";
-                String assignedCode = assignedBc.split(" - ")[0].split(" / ")[0].trim();
-                String requestedCode = requestedBc.split(" - ")[0].split(" / ")[0].trim();
-
-                if (!requestedCode.isEmpty() && !assignedCode.equalsIgnoreCase(requestedCode)) {
-                    resp.message = "Access denied: You are only authorized to log into your assigned Business Center (" + assignedBc + ").";
+                if (!isOwnCenter(assignedBc, req.clientBusinessCode)) {
+                    resp.message = AuthDtos.CENTER_NOT_ALLOWED;
                     return resp;
                 }
             }

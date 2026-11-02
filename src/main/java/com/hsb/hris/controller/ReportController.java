@@ -134,7 +134,7 @@ public class ReportController {
             if (emp.getEpfNo() != null) {
                 String epfUpper = emp.getEpfNo().trim().toUpperCase();
                 empMap.put(epfUpper, emp);
-                empPlantMap.put(epfUpper, emp.getPlantCode() == null ? "" : emp.getPlantCode().trim());
+                empPlantMap.put(epfUpper, codeOf(emp.getPlantCode()));
                 String fullName = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " " +
                                    (emp.getLastName() == null ? "" : emp.getLastName())).trim();
                 empNameMap.put(epfUpper, fullName);
@@ -145,6 +145,7 @@ public class ReportController {
         java.util.Set<String> seenEpfs = new java.util.HashSet<>();
 
         // 1. Check DeductionTransaction records (multi-month advance cuts)
+        // A monthly entry counts only when the employee has no advance transaction, same as the salary sheet
         for (DeductionTransaction row : deductionsForMonth(businessCenter, year, month)) {
             if (isAdvance(row.getDidCode(), row.getDeductionName(), advanceCodes)) {
                 String epf = row.getEpfNo() == null ? "" : row.getEpfNo().trim();
@@ -179,7 +180,7 @@ public class ReportController {
                             || "Y".equalsIgnoreCase(td.getEveryMonth()) || "true".equalsIgnoreCase(td.getEveryMonth());
                     if (monthMatch) {
                         String epf = td.getEpfNo() == null ? "" : td.getEpfNo().trim();
-                        if (seenEpfs.add(epf.toUpperCase())) {
+                        if (!seenEpfs.contains(epf.toUpperCase())) {
                             String plantCode = empPlantMap.getOrDefault(epf.toUpperCase(), "");
                             String empName = empNameMap.getOrDefault(epf.toUpperCase(), epf);
                             BigDecimal amount = td.getDidAmount() != null ? BigDecimal.valueOf(td.getDidAmount()) : BigDecimal.ZERO;
@@ -451,8 +452,15 @@ public class ReportController {
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.withDayOfMonth(from.lengthOfMonth());
         try {
+            Map<String, String> employeeCenters = new LinkedHashMap<>();
+            employeeRepository.findAll().forEach(employee -> {
+                if (employee.getEpfNo() != null) employeeCenters.put(employee.getEpfNo().trim().toUpperCase(), employee.getBusinessCenter());
+            });
             return deductionRepository.findAll().stream()
-                    .filter(row -> matches(row.getBusinessCenter(), businessCenter))
+                    // A transaction saved for "ALL" belongs to the employee's business center
+                    .filter(row -> matches("ALL".equalsIgnoreCase(trim(row.getBusinessCenter()))
+                            ? employeeCenters.get(trim(row.getEpfNo()).toUpperCase())
+                            : row.getBusinessCenter(), businessCenter))
                     .filter(row -> "ACTIVE".equalsIgnoreCase(trim(row.getStatus())))
                     .filter(row -> (row.getStartDate() == null || !row.getStartDate().isAfter(to))
                             && (row.getEndDate() == null || !row.getEndDate().isBefore(from)))
@@ -479,7 +487,12 @@ public class ReportController {
 
     private boolean matches(String value, String filter) {
         return filter == null || filter.isBlank() || "ALL".equalsIgnoreCase(filter.trim())
-                || (value != null && value.trim().equalsIgnoreCase(filter.trim()));
+                || (value != null && codeOf(value).equalsIgnoreCase(codeOf(filter)));
+    }
+
+    // "P01 / Plant Name" to "P01"; codes may contain spaces ("BA POL")
+    private String codeOf(String value) {
+        return value == null ? "" : value.split("/", 2)[0].trim();
     }
 
     private boolean contains(String value, String term) {

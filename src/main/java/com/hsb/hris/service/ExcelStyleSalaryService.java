@@ -222,7 +222,7 @@ public class ExcelStyleSalaryService {
         for (Attendance a : attendanceRecords) {
             if (a.getEpfNo() == null) continue;
             String epf = a.getEpfNo().trim().toUpperCase();
-            String plant = (a.getPlantCode() != null && !a.getPlantCode().isBlank()) ? a.getPlantCode().trim() : "DEFAULT";
+            String plant = (a.getPlantCode() != null && !a.getPlantCode().isBlank()) ? plantCodeOf(a.getPlantCode()) : "DEFAULT";
             String businessCenter = a.getBusinessCenter() == null ? "" : a.getBusinessCenter().trim();
             empPlantGroup.computeIfAbsent(epf + "|" + plant + "|" + businessCenter, k -> new ArrayList<>()).add(a);
             attendanceByEpf.computeIfAbsent(epf, k -> new ArrayList<>()).add(a);
@@ -233,7 +233,7 @@ public class ExcelStyleSalaryService {
             if (emp.getEpfNo() == null) continue;
             String epf = emp.getEpfNo().trim().toUpperCase();
             if (attendanceByEpf.containsKey(epf)) continue;
-            String plant = (emp.getPlantCode() != null && !emp.getPlantCode().isBlank()) ? emp.getPlantCode().trim() : "DEFAULT";
+            String plant = (emp.getPlantCode() != null && !emp.getPlantCode().isBlank()) ? plantCodeOf(emp.getPlantCode()) : "DEFAULT";
             String bc = (emp.getBusinessCenter() != null) ? emp.getBusinessCenter().trim() : "";
             empPlantGroup.computeIfAbsent(epf + "|" + plant + "|" + bc, k -> new ArrayList<>());
         }
@@ -243,7 +243,7 @@ public class ExcelStyleSalaryService {
         for (String key : empPlantGroup.keySet()) {
             String[] parts = key.split("\\|");
             Employee emp = employeeMap.get(parts[0]);
-            String home = emp == null || emp.getPlantCode() == null ? "" : emp.getPlantCode().trim();
+            String home = emp == null || emp.getPlantCode() == null ? "" : plantCodeOf(emp.getPlantCode());
             primaryKeyByEpf.putIfAbsent(parts[0], key);
             if (parts[1].equalsIgnoreCase(home)) primaryKeyByEpf.put(parts[0], key);
         }
@@ -351,7 +351,8 @@ public class ExcelStyleSalaryService {
                 double[] monthly = new double[5];
                 for (TDeduction d : allDeductions) {
                     if (d.getEpfNo() == null || !epf.equalsIgnoreCase(d.getEpfNo().trim())) continue;
-                    if (!yr.equals(trim(d.getAddYear())) || !mo.equals(trim(d.getAddMonth()))) continue;
+                    boolean thisMonth = yr.equals(trim(d.getAddYear())) && mo.equals(trim(d.getAddMonth()));
+                    if (!thisMonth && !isYes(d.getEveryMonth())) continue;
                     DeductionMaster master = d.getDidCode() == null ? null : deductionMasters.get(d.getDidCode().trim().toUpperCase());
                     monthly[deductionType(d.getDidCode(), null, master, null, null)] += d.getDidAmount() != null ? d.getDidAmount() : 0;
                 }
@@ -426,7 +427,7 @@ public class ExcelStyleSalaryService {
 
         boolean allPlants = plantFilter == null || plantFilter.isBlank() || "ALL".equalsIgnoreCase(plantFilter.trim());
         return results.stream()
-                .filter(r -> allPlants || r.plantCode.equalsIgnoreCase(plantFilter.trim()))
+                .filter(r -> allPlants || r.plantCode.equalsIgnoreCase(plantCodeOf(plantFilter)))
                 .sorted(Comparator.comparing((SalarySheetRow r) -> r.plantCode, String.CASE_INSENSITIVE_ORDER)
                         .thenComparing(r -> r.epfNo.replaceAll("\\D", "").length())
                         .thenComparing(r -> r.epfNo, String.CASE_INSENSITIVE_ORDER))
@@ -452,6 +453,11 @@ public class ExcelStyleSalaryService {
 
     private static boolean isYes(String value) {
         return value != null && ("Y".equalsIgnoreCase(value.trim()) || "YES".equalsIgnoreCase(value.trim()) || "1".equals(value.trim()) || "TRUE".equalsIgnoreCase(value.trim()));
+    }
+
+    // "P01 / Plant Name" to "P01"; codes may contain spaces ("BA POL")
+    private static String plantCodeOf(String value) {
+        return value == null ? "" : value.split("/", 2)[0].trim();
     }
 
     private static String trim(String value) {

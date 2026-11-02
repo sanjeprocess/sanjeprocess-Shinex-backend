@@ -20,7 +20,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Attendan
            "UPPER(TRIM(a.businessCenter)) LIKE UPPER(CONCAT(TRIM(:bc), ' %')) OR " +
            "UPPER(TRIM(a.businessCenter)) LIKE UPPER(CONCAT(TRIM(:bc), '/%')) OR " +
            "EXISTS (SELECT 1 FROM Employee e WHERE TRIM(e.epfNo) = TRIM(a.epfNo) AND " +
-           "        (UPPER(TRIM(e.businessCenter)) = UPPER(TRIM(:bc)) OR UPPER(TRIM(e.businessCenter)) LIKE UPPER(CONCAT(TRIM(:bc), '%')))) OR " +
+           "        (UPPER(TRIM(e.businessCenter)) = UPPER(TRIM(:bc)) OR UPPER(TRIM(e.businessCenter)) LIKE UPPER(CONCAT(TRIM(:bc), ' %')) OR UPPER(TRIM(e.businessCenter)) LIKE UPPER(CONCAT(TRIM(:bc), '/%')))) OR " +
            "EXISTS (SELECT 1 FROM BusinessCenter c WHERE " +
            "        (UPPER(TRIM(c.companyId)) = UPPER(TRIM(:bc)) OR UPPER(TRIM(c.companyName)) = UPPER(TRIM(:bc))) AND " +
            "        (UPPER(TRIM(a.businessCenter)) = UPPER(TRIM(c.companyId)) OR UPPER(TRIM(a.businessCenter)) = UPPER(TRIM(c.companyName))))")

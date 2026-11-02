@@ -81,7 +81,7 @@ public class Plant {
     @Column(name = "Max_Hours_Cap")
     private BigDecimal maxHoursCap;
 
-    @Transient
+    @Column(name = "Business_Center", length = 100)
     @JsonProperty("businessCenter")
     private String businessCenter;
 

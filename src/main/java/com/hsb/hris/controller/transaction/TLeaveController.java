@@ -1,5 +1,7 @@
 package com.hsb.hris.controller.transaction;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.entity.TLeave;
 import com.hsb.hris.repository.TLeaveRepository;
 import com.hsb.hris.controller.master.GenericMasterController;
@@ -48,6 +50,7 @@ public class TLeaveController extends GenericMasterController<TLeave, Integer> {
     @Override
     @PutMapping("/{id}")
     public ResponseEntity<TLeave> update(@PathVariable Integer id, @RequestBody TLeave leave) {
+        repo.findById(id).ifPresent(BusinessCenterScope::assertVisible);
         try {
             enforceDateAccess(leave.getLeaveStartDate());
             validateDateRange(leave);

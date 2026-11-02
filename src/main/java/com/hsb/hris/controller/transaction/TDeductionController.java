@@ -1,5 +1,7 @@
 package com.hsb.hris.controller.transaction;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.entity.TDeduction;
 import com.hsb.hris.entity.id.TDeductionId;
 import com.hsb.hris.repository.TDeductionRepository;
@@ -33,6 +35,7 @@ public class TDeductionController extends GenericMasterController<TDeduction, TD
     public ResponseEntity<TDeduction> update(@PathVariable String epfNo,
                                            @PathVariable String didCode,
                                            @RequestBody TDeduction entity) {
+        BusinessCenterScope.assertEmployee(epfNo);
         TDeductionId id = new TDeductionId(epfNo, didCode);
         return repo.findById(id).map(existing -> {
             existing.setBusinessCenter(entity.getBusinessCenter());
@@ -46,6 +49,7 @@ public class TDeductionController extends GenericMasterController<TDeduction, TD
 
     @DeleteMapping("/{epfNo}/{didCode}")
     public ResponseEntity<Void> delete(@PathVariable String epfNo, @PathVariable String didCode) {
+        BusinessCenterScope.assertEmployee(epfNo);
         TDeductionId id = new TDeductionId(epfNo, didCode);
         if (!repo.existsById(id)) {
             return ResponseEntity.notFound().build();

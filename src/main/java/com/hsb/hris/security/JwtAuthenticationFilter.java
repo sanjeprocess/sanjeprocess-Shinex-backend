@@ -22,10 +22,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final LoginUserRepository userRepository;
+    private final BusinessCenterScope businessCenterScope;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, LoginUserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, LoginUserRepository userRepository, BusinessCenterScope businessCenterScope) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
+        this.businessCenterScope = businessCenterScope;
     }
 
     @Override
@@ -39,6 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        HttpServletRequest scopedRequest = request;
         final String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
@@ -62,7 +65,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(auth);
 
                 LoginUser user = userRepository.findByLoginName(username).orElse(null);
-                boolean superAdmin = "SUPERADMIN".equalsIgnoreCase(role);
+                boolean superAdmin = BusinessCenterScope.isSuperAdminRole(role);
+                if (user == null && !superAdmin) {
+                    SecurityContextHolder.clearContext();
+                    reject(response, HttpServletResponse.SC_UNAUTHORIZED, "This account no longer exists.");
+                    return;
+                }
                 if (user != null && user.isBlocked() && !superAdmin) {
                     reject(response, HttpServletResponse.SC_FORBIDDEN, "This account is blocked.");
                     return;
@@ -82,9 +90,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     reject(response, HttpServletResponse.SC_FORBIDDEN, "User management permission is required.");
                     return;
                 }
+                // The user's center comes from the database, never from the request
+                if (!superAdmin && user != null) {
+                    String code = businessCenterScope.restrict(request, user);
+                    if (code != null) scopedRequest = new BusinessCenterRequest(request, code);
+                }
             }
         }
-        filterChain.doFilter(request, response);
+        filterChain.doFilter(scopedRequest, response);
     }
 
     private boolean isWrite(HttpServletRequest request) {

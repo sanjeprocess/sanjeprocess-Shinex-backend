@@ -1,6 +1,8 @@
 package com.hsb.hris.dto;
 
 public class AuthDtos {
+    public static final String CENTER_NOT_ALLOWED = "Access denied: this account cannot sign in to the selected Business Center.";
+
     public static class LoginRequest {
         public String loginName;
         public String password;

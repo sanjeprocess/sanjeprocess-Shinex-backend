@@ -1,5 +1,7 @@
 package com.hsb.hris.controller.transaction;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.entity.DeductionTransaction;
 import com.hsb.hris.repository.DeductionTransactionRepository;
 import org.springframework.http.HttpStatus;
@@ -91,6 +93,7 @@ public class DeductionTransactionController {
     public ResponseEntity<DeductionTransaction> update(
             @PathVariable String id,
             @RequestBody DeductionTransaction update) {
+        repository.findById(id).ifPresent(BusinessCenterScope::assertVisible);
         return repository.findById(id).map(existing -> {
             update.setId(id);
             validate(update);
@@ -101,6 +104,7 @@ public class DeductionTransactionController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        repository.findById(id).ifPresent(BusinessCenterScope::assertVisible);
         if (!repository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }

@@ -56,8 +56,7 @@ public class SecurityConfig {
                     AntPathRequestMatcher.antMatcher("/api/auth/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.OPTIONS, "/**"),
                     AntPathRequestMatcher.antMatcher("/api/health"),
-                    // Allow GET /api/business-centers publicly so the login page
-                    // can populate the Business Center dropdown before authentication
+                    // Login page dropdown: returns only each center's code and name to anonymous visitors
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/business-centers"),
                     // Error dispatches carry no JWT; without this every 404/500 turned into a 401
                     // and the frontend logged the user out

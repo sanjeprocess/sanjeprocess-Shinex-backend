@@ -1,5 +1,7 @@
 package com.hsb.hris.controller.master;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.entity.Employee;
 import com.hsb.hris.service.master.EmployeeService;
 import org.springframework.http.ResponseEntity;
@@ -112,6 +114,7 @@ public class EmployeeController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Employee> update(@PathVariable String id, @RequestBody Employee e) {
+        service.findById(id).ifPresent(BusinessCenterScope::assertVisible);
         return service.findById(id).map(existing -> {
             if (e.getFirstName() != null && !e.getFirstName().isBlank()) existing.setFirstName(e.getFirstName());
             if (e.getLastName() != null && !e.getLastName().isBlank()) existing.setLastName(e.getLastName());
@@ -147,6 +150,7 @@ public class EmployeeController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        service.findById(id.trim()).ifPresent(BusinessCenterScope::assertVisible);
         service.deleteById(id.trim());
         return ResponseEntity.noContent().build();
     }

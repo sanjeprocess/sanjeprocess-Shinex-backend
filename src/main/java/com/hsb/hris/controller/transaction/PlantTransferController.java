@@ -1,5 +1,7 @@
 package com.hsb.hris.controller.transaction;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -77,13 +79,7 @@ public class PlantTransferController {
     public List<PlantTransferDto> list(@RequestParam(value = "businessCenter", required = false) String businessCenter) {
         List<PlantTransferDto> list = new ArrayList<>(transferStore.values());
         if (businessCenter != null && !businessCenter.isBlank() && !"ALL".equalsIgnoreCase(businessCenter.trim())) {
-            String cleanBc = businessCenter.trim().toUpperCase();
-            return list.stream().filter(t -> {
-                String tBc = t.getBusinessCenter();
-                if (tBc == null || tBc.isBlank()) return true;
-                String up = tBc.trim().toUpperCase();
-                return up.equals(cleanBc) || up.startsWith(cleanBc) || cleanBc.startsWith(up);
-            }).toList();
+            return list.stream().filter(t -> BusinessCenterScope.sameCenter(t.getBusinessCenter(), businessCenter)).toList();
         }
         return list;
     }
@@ -109,6 +105,7 @@ public class PlantTransferController {
 
     @PutMapping("/{id}")
     public ResponseEntity<PlantTransferDto> update(@PathVariable String id, @RequestBody PlantTransferDto dto) {
+        BusinessCenterScope.assertVisible(transferStore.get(id.trim()));
         String cleanId = id.trim();
         dto.setId(cleanId);
         transferStore.put(cleanId, dto);
@@ -117,6 +114,7 @@ public class PlantTransferController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        BusinessCenterScope.assertVisible(transferStore.get(id.trim()));
         transferStore.remove(id.trim());
         return ResponseEntity.noContent().build();
     }

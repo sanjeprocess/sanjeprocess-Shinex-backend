@@ -1,5 +1,7 @@
 package com.hsb.hris.controller.master;
 
+
+import com.hsb.hris.security.BusinessCenterScope;
 import com.hsb.hris.entity.Section;
 import com.hsb.hris.repository.SectionRepository;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +29,7 @@ public class SectionController extends GenericMasterController<Section, String> 
     public ResponseEntity<Void> delete(@PathVariable String id) {
         String cleanId = id != null ? id.trim() : "";
         if (!cleanId.isEmpty()) {
+            repo.findById(cleanId).ifPresent(BusinessCenterScope::assertVisible);
             try {
                 Integer count = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM dbo.TBL_Emp_Master WHERE RTRIM(LTRIM(Emp_Section_Code)) = ? OR Emp_Section_Code = ?",
@@ -77,6 +80,7 @@ public class SectionController extends GenericMasterController<Section, String> 
     @PutMapping("/{id}")
     public ResponseEntity<Section> update(@PathVariable String id, @RequestBody Section entity) {
         if (!repo.existsById(id)) return ResponseEntity.notFound().build();
+        repo.findById(id).ifPresent(BusinessCenterScope::assertVisible);
 
         if (entity.getSectionName() == null || entity.getSectionName().trim().isEmpty()) {
             throw new IllegalArgumentException("Section name is required");
@@ -121,12 +125,8 @@ public class SectionController extends GenericMasterController<Section, String> 
         if (businessCenter == null || businessCenter.trim().isEmpty() || businessCenter.equalsIgnoreCase("ALL")) {
             return all;
         }
-        String cleanBc = businessCenter.trim().toUpperCase();
         return all.stream()
-                .filter(s -> {
-                    String bc = s.getBusinessCenter() == null ? "" : s.getBusinessCenter().trim().toUpperCase();
-                    return bc.isEmpty() || bc.equals(cleanBc) || bc.startsWith(cleanBc) || cleanBc.startsWith(bc);
-                })
+                .filter(s -> BusinessCenterScope.sameCenter(s.getBusinessCenter(), businessCenter))
                 .collect(Collectors.toList());
     }
 
