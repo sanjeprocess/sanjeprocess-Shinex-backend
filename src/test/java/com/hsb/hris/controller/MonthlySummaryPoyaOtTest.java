@@ -33,10 +33,14 @@ class MonthlySummaryPoyaOtTest {
     }
 
     private Map<String, Object> summary(Double employeeExtra, List<Attendance> rows) {
+        return summary(2500.0, employeeExtra, rows);
+    }
+
+    private Map<String, Object> summary(double basicSalary, Double employeeExtra, List<Attendance> rows) {
         Employee employee = new Employee();
         employee.setEpfNo("E1");
         employee.setFirstName("Test");
-        employee.setBasicSalary(2500.0);
+        employee.setBasicSalary(basicSalary);
         employee.setSundayPoyaExtra(employeeExtra);
 
         EmployeeRepository employees = mock(EmployeeRepository.class);
@@ -121,6 +125,38 @@ class MonthlySummaryPoyaOtTest {
 
         assertEquals(2.0, result.get("normalDays"));
         assertEquals(5000.0, result.get("normalAmount"));
+    }
+
+    @Test
+    void savedAttendanceFillsEveryPaySheetField() {
+        List<Attendance> rows = new ArrayList<>();
+        for (int day = 1; day <= 20; day++) rows.add(row(String.format("2026-10-%02d", day), false, null, day <= 4 ? 1.0 : 0));
+
+        Map<String, Object> result = summary(500.0, null, rows);
+
+        assertEquals(20.0, result.get("normalDays"));
+        assertEquals(500.0, result.get("normalRate"));
+        assertEquals(10000.0, result.get("normalAmount"));
+        assertEquals(4.0, result.get("overtimeHours"));
+        assertEquals(93.75, result.get("overtimeRate"));
+        assertEquals(375.0, result.get("overtimeAmount"));
+        assertEquals(10375.0, result.get("grossSalary"));
+        assertEquals(800.0, (Double) result.get("epf8"), 0.001);
+        assertEquals(800.0, (Double) result.get("totalDeductions"), 0.001);
+        assertEquals(9575.0, (Double) result.get("netSalary"), 0.001);
+        assertEquals(1200.0, (Double) result.get("epf12"), 0.001);
+        assertEquals(300.0, (Double) result.get("etf3"), 0.001);
+    }
+
+    @Test
+    void monthWithNoSavedAttendanceIsZeroWithTheRatesStillShown() {
+        Map<String, Object> result = summary(500.0, null, new ArrayList<>());
+
+        assertEquals(0.0, result.get("normalDays"));
+        assertEquals(500.0, result.get("normalRate"));
+        assertEquals(93.75, result.get("overtimeRate"));
+        assertEquals(0.0, result.get("grossSalary"));
+        assertEquals(0.0, result.get("netSalary"));
     }
 
     @Test
