@@ -2,10 +2,12 @@ package com.hsb.hris.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "TBL_Emp_Master")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Employee {
 
     @Id
@@ -90,6 +92,9 @@ public class Employee {
     @Column(name = "Emp_Photo_Url", columnDefinition = "nvarchar(max)")
     private String photoUrl;
 
+    @Column(name = "Statutory_Holiday_Eligible")
+    private Boolean statutoryHolidayEligible;
+
     public String getEpfNo() { return epfNo; }
     public void setEpfNo(String epfNo) { this.epfNo = epfNo; }
     public String getNicNo() { return nicNo; }
@@ -146,4 +151,6 @@ public class Employee {
     public void setSundayPoyaExtra(Double sundayPoyaExtra) { this.sundayPoyaExtra = sundayPoyaExtra; }
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+    public Boolean getStatutoryHolidayEligible() { return statutoryHolidayEligible; }
+    public void setStatutoryHolidayEligible(Boolean statutoryHolidayEligible) { this.statutoryHolidayEligible = statutoryHolidayEligible; }
 }

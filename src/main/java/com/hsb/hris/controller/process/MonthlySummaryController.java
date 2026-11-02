@@ -3,6 +3,7 @@ package com.hsb.hris.controller.process;
 import com.hsb.hris.entity.*;
 import com.hsb.hris.entity.id.AttSummaryId;
 import com.hsb.hris.repository.*;
+import com.hsb.hris.service.transaction.StatutoryHolidayService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -21,16 +22,19 @@ public class MonthlySummaryController {
     private final AttendanceRepository attendanceRepo;
     private final PlantRepository plantRepo;
     private final SectionRepository sectionRepo;
+    private final StatutoryHolidayService statutoryHolidays;
 
     public MonthlySummaryController(EmployeeRepository employees, TAdditionRepository additions,
                                     TDeductionRepository deductions, TLoanRepository loans,
                                     AttendanceSummaryRepository summaries, AdditionMasterRepository additionMasters,
                                     DeductionMasterRepository deductionMasters, AttendanceRepository attendanceRepo,
-                                    PlantRepository plantRepo, SectionRepository sectionRepo) {
+                                    PlantRepository plantRepo, SectionRepository sectionRepo,
+                                    StatutoryHolidayService statutoryHolidays) {
         this.employees = employees; this.additions = additions; this.deductions = deductions;
         this.loans = loans; this.summaries = summaries; this.additionMasters = additionMasters;
         this.deductionMasters = deductionMasters; this.attendanceRepo = attendanceRepo;
         this.plantRepo = plantRepo; this.sectionRepo = sectionRepo;
+        this.statutoryHolidays = statutoryHolidays;
     }
 
     @GetMapping
@@ -118,12 +122,12 @@ public class MonthlySummaryController {
         double attNormalDays = 0;
         double attPoyaDays = 0;
         double attSpecialDays = 0;
-        double attStatutoryDays = 0;
         double attNightDays = 0;
         double attOtHours = 0;
         double attDayAllowance = 0;
         double attNightAllowance = 0;
-        double attPoyaExtra = 0;
+        double attPoyaRowExtra = 0;
+        double attPoyaDaysNoExtra = 0;
         double attMealValue = 0;
 
         for (Attendance a : monthlyAttList) {
@@ -131,15 +135,14 @@ public class MonthlySummaryController {
             attDaysCome += dayWeight;
             if ("Y".equalsIgnoreCase(a.getSaturdayPoya())) {
                 attPoyaDays += dayWeight;
+                if (a.getSundayPoyaExtra() != null && a.getSundayPoyaExtra() > 0) attPoyaRowExtra += a.getSundayPoyaExtra();
+                else attPoyaDaysNoExtra += dayWeight;
             } else if ("Y".equalsIgnoreCase(a.getSpecialDay())) {
                 attSpecialDays += dayWeight;
             } else {
                 attNormalDays += dayWeight;
             }
 
-            if (a.getStatutoryHolidays() != null && a.getStatutoryHolidays() > 0) {
-                attStatutoryDays += a.getStatutoryHolidays();
-            }
             if ("Y".equalsIgnoreCase(a.getNightShift()) || "Y".equalsIgnoreCase(a.getFullNight())) {
                 attNightDays += dayWeight;
                 if (a.getNightAllowance() != null && a.getNightAllowance() > 0) {
@@ -149,7 +152,6 @@ public class MonthlySummaryController {
 
             if (a.getTotalOt() != null && a.getTotalOt() > 0) attOtHours += a.getTotalOt();
             if (a.getDayAllowance() != null && a.getDayAllowance() > 0) attDayAllowance += a.getDayAllowance();
-            if (a.getSundayPoyaExtra() != null && a.getSundayPoyaExtra() > 0) attPoyaExtra += a.getSundayPoyaExtra();
             if (a.getTotalMealValue() != null && a.getTotalMealValue() > 0) attMealValue += a.getTotalMealValue();
         }
 
@@ -157,7 +159,7 @@ public class MonthlySummaryController {
         AttendanceSummary attendance = summaries.findById(new AttSummaryId(yr, mo, epf)).orElse(null);
         Map<String, Object> attendanceData = new LinkedHashMap<>();
         double workingDays = 0, otHours = 0, dayAllowance = value(employee.getDayAllowance()),
-                nightAllowanceRate = value(employee.getNightAllowance()), poyaDayExtra = value(employee.getSundayPoyaExtra()),
+                nightAllowanceRate = value(employee.getNightAllowance()),
                 mealValue = 0, otAmount = 0;
 
         if (monthlyAttList != null && !monthlyAttList.isEmpty()) {
@@ -166,26 +168,23 @@ public class MonthlySummaryController {
             if (attendance != null && attendance.getDayRate() != null && attendance.getDayRate() > 0) dayAllowance = attendance.getDayRate();
             else if (attDayAllowance > 0) dayAllowance = attDayAllowance;
             if (attendance != null && attendance.getNightRate() != null && attendance.getNightRate() > 0) nightAllowanceRate = attendance.getNightRate();
-            if (attendance != null && attendance.getSundayPoyaExtra() != null && attendance.getSundayPoyaExtra() > 0) poyaDayExtra = attendance.getSundayPoyaExtra();
-            else if (attPoyaExtra > 0) poyaDayExtra = attPoyaExtra;
             mealValue = attMealValue > 0 ? attMealValue : (attendance != null ? value(attendance.getTotalMealValue()) : 0);
         } else if (attendance != null) {
             workingDays = value(attendance.getNormalShift());
             otHours = value(attendance.getOt1Hours()) + value(attendance.getOt2Hours());
             if (attendance.getDayRate() != null && attendance.getDayRate() > 0) dayAllowance = attendance.getDayRate();
             if (attendance.getNightRate() != null && attendance.getNightRate() > 0) nightAllowanceRate = attendance.getNightRate();
-            if (attendance.getSundayPoyaExtra() != null && attendance.getSundayPoyaExtra() > 0) poyaDayExtra = attendance.getSundayPoyaExtra();
             mealValue = value(attendance.getTotalMealValue());
         } else {
             workingDays = attDaysCome;
             otHours = attOtHours;
             if (attDayAllowance > 0) dayAllowance = attDayAllowance;
-            if (attPoyaExtra > 0) poyaDayExtra = attPoyaExtra;
             if (attMealValue > 0) mealValue = attMealValue;
         }
 
         // Day Type Rates & Amounts (Daily rate: basicSalary is the per-day rate)
-        double normalDays = attNormalDays > 0 ? attNormalDays : workingDays;
+        // Sunday Poya days are paid on their own line, never also as normal days
+        double normalDays = attNormalDays + attSpecialDays > 0 ? attNormalDays + attSpecialDays : Math.max(0, workingDays - attPoyaDays);
         double normalRate = basicSalary > 0 ? basicSalary : 0;
         double normalAmount = Math.round(normalDays * normalRate * 100.0) / 100.0;
 
@@ -193,7 +192,15 @@ public class MonthlySummaryController {
         double poyaRate = Math.round(normalRate * 1.5 * 100.0) / 100.0;
         double poyaAmount = 0.0;
         if (poyaDays > 0) {
-            poyaAmount = poyaDayExtra > 0 ? Math.round(poyaDays * poyaDayExtra * 100.0) / 100.0 : Math.round(poyaDays * poyaRate * 100.0) / 100.0;
+            if (attendance != null && attendance.getSundayPoyaExtra() != null && attendance.getSundayPoyaExtra() > 0) {
+                // Monthly summary holds a per-day value
+                poyaAmount = Math.round(poyaDays * attendance.getSundayPoyaExtra() * 100.0) / 100.0;
+            } else {
+                // Each row's extra is that day's amount; rows without one use the employee value or 1.5x rate
+                double fallback = value(employee.getSundayPoyaExtra()) > 0 ? value(employee.getSundayPoyaExtra()) : poyaRate;
+                poyaAmount = Math.round((attPoyaRowExtra + attPoyaDaysNoExtra * fallback) * 100.0) / 100.0;
+            }
+            poyaRate = Math.round(poyaAmount / poyaDays * 100.0) / 100.0;
         }
 
         double nightDays = attNightDays;
@@ -216,8 +223,10 @@ public class MonthlySummaryController {
             otAmount = 0.0;
         }
 
-        double statutoryHolidayCount = attStatutoryDays;
-        double statutoryHolidayAmount = Math.round(statutoryHolidayCount * normalRate * 100.0) / 100.0;
+        // Statutory holidays: per holiday, eligible employees get the Working or Not Working value
+        StatutoryHolidayService.EmployeePay statutoryPay = statutoryHolidays.computeForEmployee(employee, yr, mo, monthlyAttList);
+        double statutoryHolidayCount = statutoryPay.count;
+        double statutoryHolidayAmount = statutoryPay.total;
 
         attendanceData.put("workingDays", workingDays);
         attendanceData.put("normalDays", normalDays);
@@ -238,13 +247,15 @@ public class MonthlySummaryController {
         attendanceData.put("mealValue", mealValue);
         attendanceData.put("statutoryHolidayCount", statutoryHolidayCount);
         attendanceData.put("statutoryHolidayAmount", statutoryHolidayAmount);
+        attendanceData.put("statutoryHolidays", statutoryPay.lines);
         result.put("attendance", attendanceData);
 
         // Pay Advice components (Generated_Pay_Advice_v2 layout)
         double grossSalary = Math.round((normalAmount + nightAmount + poyaAmount + otAmount + dayAllowance + totalAdditions + statutoryHolidayAmount) * 100.0) / 100.0;
 
         // EPF 8%
-        double epfBase = normalAmount + epfQualifyingAdditions;
+        // As on the salary sheet: EPF is charged on normal and Sunday Poya pay
+        double epfBase = normalAmount + poyaAmount + epfQualifyingAdditions;
         double epf8 = Math.round(epfBase * 0.08 * 100.0) / 100.0;
         double epf12 = Math.round(epfBase * 0.12 * 100.0) / 100.0;
         double etf3 = Math.round(epfBase * 0.03 * 100.0) / 100.0;

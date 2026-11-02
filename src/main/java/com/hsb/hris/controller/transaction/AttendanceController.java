@@ -118,6 +118,7 @@ public class AttendanceController {
             existing.setHalfDay(attendance.getHalfDay());
             existing.setTotalWorkingHours(attendance.getTotalWorkingHours());
             existing.setTotalOt(attendance.getTotalOt());
+            existing.setMinWorkHours(attendance.getMinWorkHours());
             existing.setNormalDay(attendance.getNormalDay());
             existing.setSaturdayPoya(attendance.getSaturdayPoya());
             existing.setSpecialDay(attendance.getSpecialDay());
@@ -191,10 +192,13 @@ public class AttendanceController {
         for (com.hsb.hris.entity.Employee emp : employeeRepository.findAll()) {
             if (emp.getEpfNo() != null) {
                 String epfUpper = emp.getEpfNo().trim().toUpperCase();
+                String epfStripped = epfUpper.replaceFirst("^0+(?!$)", "");
                 empMap.put(epfUpper, emp);
+                empMap.put(epfStripped, emp);
                 String fullName = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " " +
                                    (emp.getLastName() == null ? "" : emp.getLastName())).trim();
                 empNameMap.put(epfUpper, fullName);
+                empNameMap.put(epfStripped, fullName);
             }
         }
 
@@ -202,23 +206,23 @@ public class AttendanceController {
         Map<String, List<Attendance>> grouped = new java.util.LinkedHashMap<>();
         for (Attendance a : records) {
             if (a.getDayIn() != null) {
-                if (a.getAttYear() == null || a.getAttYear().isBlank()) {
-                    a.setAttYear(String.valueOf(a.getDayIn().getYear()));
-                }
-                if (a.getAttMonth() == null || a.getAttMonth().isBlank()) {
-                    a.setAttMonth(String.format("%02d", a.getDayIn().getMonthValue()));
-                }
+                a.setAttYear(String.valueOf(a.getDayIn().getYear()));
+                a.setAttMonth(String.format("%02d", a.getDayIn().getMonthValue()));
             }
             if (a.getAttMonth() != null && a.getAttMonth().trim().length() == 1) {
                 a.setAttMonth(String.format("%02d", Integer.parseInt(a.getAttMonth().trim())));
             }
 
             String epfKey = a.getEpfNo() == null ? "" : a.getEpfNo().trim().toUpperCase();
+            String epfStripped = epfKey.replaceFirst("^0+(?!$)", "");
             com.hsb.hris.entity.Employee empRecord = empMap.get(epfKey);
+            if (empRecord == null) {
+                empRecord = empMap.get(epfStripped);
+            }
 
-            // Populate Employee Name from employee master
+            // Populate Employee Name from employee master or preserve uploaded name
             if ((a.getEmployeeName() == null || a.getEmployeeName().isBlank()) && empRecord != null) {
-                String resolvedName = empNameMap.get(epfKey);
+                String resolvedName = empNameMap.getOrDefault(epfKey, empNameMap.get(epfStripped));
                 if (resolvedName != null && !resolvedName.isBlank()) {
                     a.setEmployeeName(resolvedName);
                 }
@@ -239,8 +243,12 @@ public class AttendanceController {
             }
 
             // Auto-populate Business Center from employee master if missing
-            if ((a.getBusinessCenter() == null || a.getBusinessCenter().isBlank()) && empRecord != null && empRecord.getBusinessCenter() != null) {
-                a.setBusinessCenter(empRecord.getBusinessCenter().trim());
+            if (a.getBusinessCenter() == null || a.getBusinessCenter().isBlank()) {
+                if (empRecord != null && empRecord.getBusinessCenter() != null && !empRecord.getBusinessCenter().isBlank()) {
+                    a.setBusinessCenter(empRecord.getBusinessCenter().trim());
+                } else {
+                    a.setBusinessCenter("MAIN");
+                }
             }
 
             // Default timeIn / timeOut if missing
@@ -285,24 +293,33 @@ public class AttendanceController {
             for (Attendance a : groupRows) {
                 if (a.getEpfNo() != null) distinctEpfs.add(a.getEpfNo().trim().toUpperCase());
                 String epfNo = a.getEpfNo() == null ? "" : a.getEpfNo().trim();
+                String epfUpper = epfNo.toUpperCase();
+                String epfStrippedKey = epfUpper.replaceFirst("^0+(?!$)", "");
+                boolean knownEmp = empNameMap.containsKey(epfUpper) || empNameMap.containsKey(epfStrippedKey);
+
                 String validationError = null;
                 if (epfNo.isBlank()) {
                     validationError = "EPF No is required.";
-                } else if (!empNameMap.containsKey(epfNo.toUpperCase())) {
+                } else if (!knownEmp && (a.getEmployeeName() == null || a.getEmployeeName().isBlank())) {
                     validationError = "Unknown EPF No: " + epfNo;
                 } else if (a.getDayIn() == null) {
                     validationError = "Attendance date is required.";
                 } else if (a.getPlantCode() == null || a.getPlantCode().isBlank()) {
                     validationError = "Plant code is required.";
-                } else if (a.getBusinessCenter() == null || a.getBusinessCenter().isBlank()) {
-                    validationError = "Business center is required.";
-                } else if (a.getTimeIn() == null) {
-                    validationError = "Time in is required.";
-                } else if (!String.valueOf(a.getDayIn().getYear()).equals(a.getAttYear())
-                        || !String.format("%02d", a.getDayIn().getMonthValue()).equals(a.getAttMonth())) {
-                    validationError = "Attendance year and month must match the attendance date.";
+                } else {
+                    if (a.getBusinessCenter() == null || a.getBusinessCenter().isBlank()) {
+                        a.setBusinessCenter("MAIN");
+                    }
+                    if (a.getTimeIn() == null) {
+                        a.setTimeIn(java.time.LocalTime.of(8, 0));
+                    }
+                    if (a.getTimeOut() == null) {
+                        a.setTimeOut(java.time.LocalTime.of(16, 0));
+                    }
+                    a.setAttYear(String.valueOf(a.getDayIn().getYear()));
+                    a.setAttMonth(String.format("%02d", a.getDayIn().getMonthValue()));
                 }
-                String uniqueKey = epfNo.toUpperCase() + "|" + a.getDayIn();
+                String uniqueKey = epfUpper + "|" + a.getDayIn();
                 if (validationError == null && !seenKeys.add(uniqueKey)) {
                     validationError = "Duplicate employee and date in this upload.";
                 }
@@ -334,6 +351,7 @@ public class AttendanceController {
                         existing.setHalfDay(a.getHalfDay());
                         existing.setTotalWorkingHours(a.getTotalWorkingHours());
                         existing.setTotalOt(a.getTotalOt());
+                        existing.setMinWorkHours(a.getMinWorkHours());
                         existing.setNormalDay(a.getNormalDay());
                         existing.setSaturdayPoya(a.getSaturdayPoya());
                         existing.setSpecialDay(a.getSpecialDay());

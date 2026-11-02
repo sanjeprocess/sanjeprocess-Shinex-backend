@@ -139,6 +139,7 @@ public class EmployeeController {
             if (e.getBusinessCenter() != null && !e.getBusinessCenter().isBlank()) existing.setBusinessCenter(code(e.getBusinessCenter()));
             if (e.getSundayPoyaExtra() != null) existing.setSundayPoyaExtra(e.getSundayPoyaExtra());
             if (e.getPhotoUrl() != null && !e.getPhotoUrl().isBlank()) existing.setPhotoUrl(e.getPhotoUrl());
+            if (e.getStatutoryHolidayEligible() != null) existing.setStatutoryHolidayEligible(e.getStatutoryHolidayEligible());
             normalize(existing);
             return ResponseEntity.ok(service.save(existing));
         }).orElse(ResponseEntity.notFound().build());

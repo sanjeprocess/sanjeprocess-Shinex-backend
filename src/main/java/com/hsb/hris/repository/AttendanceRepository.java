@@ -13,6 +13,7 @@ import java.util.List;
 public interface AttendanceRepository extends JpaRepository<Attendance, AttendanceId> {
     List<Attendance> findByBusinessCenterAndAttYearAndAttMonth(String businessCenter, String year, String month);
     List<Attendance> findByEpfNoAndAttYearAndAttMonth(String epfNo, String year, String month);
+    List<Attendance> findByAttYearAndAttMonth(String year, String month);
 
     @Query("SELECT DISTINCT a FROM Attendance a WHERE " +
            "UPPER(TRIM(a.businessCenter)) = UPPER(TRIM(:bc)) OR " +

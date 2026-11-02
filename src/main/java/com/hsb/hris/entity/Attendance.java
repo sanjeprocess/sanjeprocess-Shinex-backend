@@ -1,6 +1,7 @@
 package com.hsb.hris.entity;
 
 import com.hsb.hris.entity.id.AttendanceId;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.time.LocalTime;
 @Entity
 @Table(name = "TBL_T_Attendance")
 @IdClass(AttendanceId.class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Attendance {
 
     @Id
@@ -109,6 +111,10 @@ public class Attendance {
     @Column(name = "Total_Meal_Value")
     private Double totalMealValue;
 
+    // Hours before OT starts for this row; defaults from the plant master
+    @Column(name = "Min_Work_Hours")
+    private Double minWorkHours;
+
     @Column(name = "Statutory_holidays")
     private Double statutoryHolidays;
 
@@ -196,6 +202,8 @@ public class Attendance {
     public void setNoOfMeal(Double noOfMeal) { this.noOfMeal = noOfMeal; }
     public Double getTotalMealValue() { return totalMealValue; }
     public void setTotalMealValue(Double totalMealValue) { this.totalMealValue = totalMealValue; }
+    public Double getMinWorkHours() { return minWorkHours; }
+    public void setMinWorkHours(Double minWorkHours) { this.minWorkHours = minWorkHours; }
     public Double getStatutoryHolidays() { return statutoryHolidays; }
     public void setStatutoryHolidays(Double statutoryHolidays) { this.statutoryHolidays = statutoryHolidays; }
     public Double getSundayPoyaExtra() { return sundayPoyaExtra; }

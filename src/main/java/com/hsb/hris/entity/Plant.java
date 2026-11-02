@@ -3,9 +3,11 @@ package com.hsb.hris.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "TBL_M_Customer")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Plant {
 
     @Id
@@ -60,6 +62,25 @@ public class Plant {
     @Column(name = "days_to_work_for_Att_Allow")
     private BigDecimal daysToWorkForAttAllowance;
 
+    // Shift settings used for attendance hours and OT
+    @Column(name = "Shift_Start", length = 5)
+    private String shiftStart;
+
+    @Column(name = "Shift_End", length = 5)
+    private String shiftEnd;
+
+    @Column(name = "Min_Work_Hours")
+    private BigDecimal minWorkHours;
+
+    @Column(name = "Saturday_Min_Work_Hours")
+    private BigDecimal saturdayMinWorkHours;
+
+    @Column(name = "Count_From_Shift_Start")
+    private Boolean countFromShiftStart;
+
+    @Column(name = "Max_Hours_Cap")
+    private BigDecimal maxHoursCap;
+
     @Transient
     @JsonProperty("businessCenter")
     private String businessCenter;
@@ -98,6 +119,18 @@ public class Plant {
     public void setAttendanceAllowance(String attendanceAllowance) { this.attendanceAllowance = attendanceAllowance; }
     public BigDecimal getDaysToWorkForAttAllowance() { return daysToWorkForAttAllowance; }
     public void setDaysToWorkForAttAllowance(BigDecimal daysToWorkForAttAllowance) { this.daysToWorkForAttAllowance = daysToWorkForAttAllowance; }
+    public String getShiftStart() { return shiftStart; }
+    public void setShiftStart(String shiftStart) { this.shiftStart = shiftStart; }
+    public String getShiftEnd() { return shiftEnd; }
+    public void setShiftEnd(String shiftEnd) { this.shiftEnd = shiftEnd; }
+    public BigDecimal getMinWorkHours() { return minWorkHours; }
+    public void setMinWorkHours(BigDecimal minWorkHours) { this.minWorkHours = minWorkHours; }
+    public BigDecimal getSaturdayMinWorkHours() { return saturdayMinWorkHours; }
+    public void setSaturdayMinWorkHours(BigDecimal saturdayMinWorkHours) { this.saturdayMinWorkHours = saturdayMinWorkHours; }
+    public Boolean getCountFromShiftStart() { return countFromShiftStart; }
+    public void setCountFromShiftStart(Boolean countFromShiftStart) { this.countFromShiftStart = countFromShiftStart; }
+    public BigDecimal getMaxHoursCap() { return maxHoursCap; }
+    public void setMaxHoursCap(BigDecimal maxHoursCap) { this.maxHoursCap = maxHoursCap; }
     public String getBusinessCenter() { return businessCenter; }
     public void setBusinessCenter(String businessCenter) { this.businessCenter = businessCenter; }
     public String getProfitCenter() { return profitCenter; }

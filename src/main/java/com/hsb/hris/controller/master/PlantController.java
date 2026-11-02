@@ -130,10 +130,18 @@ public class PlantController extends GenericMasterController<Plant, String> {
         plant.setContactName(emptyToNull(plant.getContactName()));
         plant.setOtCalculationAuto(normalizeFlag(plant.getOtCalculationAuto()));
         plant.setAttendanceAllowance(emptyToNull(plant.getAttendanceAllowance()));
+        plant.setShiftStart(shortTime(plant.getShiftStart()));
+        plant.setShiftEnd(shortTime(plant.getShiftEnd()));
         plant.setBusinessCenter(emptyToNull(plant.getBusinessCenter()));
         plant.setProfitCenter(emptyToNull(plant.getProfitCenter()));
         plant.setDocPath(emptyToNull(plant.getDocPath()));
         return plant;
+    }
+
+    // "07:30:00" -> "07:30" (column holds HH:mm)
+    private String shortTime(String value) {
+        String time = emptyToNull(value);
+        return time != null && time.length() > 5 ? time.substring(0, 5) : time;
     }
 
     private String emptyToNull(String value) {

@@ -2,6 +2,7 @@ package com.hsb.hris.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import jakarta.servlet.DispatcherType;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
@@ -57,8 +58,12 @@ public class SecurityConfig {
                     AntPathRequestMatcher.antMatcher("/api/health"),
                     // Allow GET /api/business-centers publicly so the login page
                     // can populate the Business Center dropdown before authentication
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/business-centers")
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/business-centers"),
+                    // Error dispatches carry no JWT; without this every 404/500 turned into a 401
+                    // and the frontend logged the user out
+                    AntPathRequestMatcher.antMatcher("/error")
                 ).permitAll()
+                .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
