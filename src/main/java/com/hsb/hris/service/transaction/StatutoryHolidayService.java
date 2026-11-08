@@ -130,6 +130,23 @@ public class StatutoryHolidayService {
         return pay;
     }
 
+    /** Hourly pay for OT worked on a statutory holiday: (Daily Rate / 9) x 2, e.g. 1,800 / 9 x 2 = 400. */
+    public static double holidayOtRate(double dailyRate) {
+        return dailyRate > 0 ? round(dailyRate / 9.0 * 2.0) : 0.0;
+    }
+
+    /** OT hours in these attendance rows that fall on a statutory holiday; only eligible employees get the holiday rate. */
+    public static double holidayOtHours(Employee employee, List<StatutoryHoliday> monthHolidays, List<Attendance> rows) {
+        if (!isEligible(employee) || monthHolidays == null || monthHolidays.isEmpty() || rows == null) return 0.0;
+        Set<LocalDate> dates = new HashSet<>();
+        for (StatutoryHoliday h : monthHolidays) dates.add(h.getHolidayDate());
+        double hours = 0;
+        for (Attendance a : rows) {
+            if (a.getDayIn() != null && dates.contains(a.getDayIn()) && a.getTotalOt() != null && a.getTotalOt() > 0) hours += a.getTotalOt();
+        }
+        return hours;
+    }
+
     public StatutoryHoliday saveHoliday(StatutoryHoliday holiday) {
         if (holiday.getHolidayName() != null) {
             String name = holiday.getHolidayName().trim();

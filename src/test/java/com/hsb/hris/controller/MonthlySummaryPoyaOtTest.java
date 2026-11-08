@@ -3,6 +3,7 @@ package com.hsb.hris.controller;
 import com.hsb.hris.controller.process.MonthlySummaryController;
 import com.hsb.hris.entity.Attendance;
 import com.hsb.hris.entity.Employee;
+import com.hsb.hris.entity.StatutoryHoliday;
 import com.hsb.hris.repository.*;
 import com.hsb.hris.service.transaction.StatutoryHolidayService;
 import org.junit.jupiter.api.Test;
@@ -37,11 +38,17 @@ class MonthlySummaryPoyaOtTest {
     }
 
     private Map<String, Object> summary(double basicSalary, Double employeeExtra, List<Attendance> rows) {
+        return summary(basicSalary, employeeExtra, rows, List.of(), true);
+    }
+
+    private Map<String, Object> summary(double basicSalary, Double employeeExtra, List<Attendance> rows,
+                                        List<StatutoryHoliday> holidays, boolean eligible) {
         Employee employee = new Employee();
         employee.setEpfNo("E1");
         employee.setFirstName("Test");
         employee.setBasicSalary(basicSalary);
         employee.setSundayPoyaExtra(employeeExtra);
+        employee.setStatutoryHolidayEligible(eligible);
 
         EmployeeRepository employees = mock(EmployeeRepository.class);
         when(employees.findByTrimmedEpfNo("E1")).thenReturn(Optional.of(employee));
@@ -49,6 +56,7 @@ class MonthlySummaryPoyaOtTest {
         when(attendance.findByEpfNoAndAttYearAndAttMonth("E1", "2026", "10")).thenReturn(rows);
         StatutoryHolidayService statutory = mock(StatutoryHolidayService.class);
         when(statutory.computeForEmployee(any(Employee.class), anyString(), anyString(), any())).thenReturn(new StatutoryHolidayService.EmployeePay());
+        when(statutory.holidaysForMonth("2026", "10")).thenReturn(holidays);
 
         return new MonthlySummaryController(employees, mock(TAdditionRepository.class), mock(TDeductionRepository.class),
                 mock(TLoanRepository.class), mock(AttendanceSummaryRepository.class), mock(AdditionMasterRepository.class),
@@ -168,5 +176,56 @@ class MonthlySummaryPoyaOtTest {
         assertEquals(1.5, result.get("overtimeHours"));
         assertEquals(468.75, result.get("overtimeRate")); // 2,500 / 8 x 1.5
         assertEquals(703.13, result.get("overtimeAmount"));
+    }
+    private static StatutoryHoliday holiday(String day) {
+        StatutoryHoliday h = new StatutoryHoliday();
+        h.setHolidayDate(LocalDate.parse(day));
+        return h;
+    }
+
+    @Test
+    void otOnAStatutoryHolidayIsPaidOnTheStatutoryLine() {
+        // Day Rate 1,800: 1,800 / 9 = 200 an hour, x 2 = 400; 5 OT hours = 2,000
+        Map<String, Object> result = summary(1800.0, null, new ArrayList<>(List.of(
+                row("2026-10-12", false, null, 2.0),
+                row("2026-10-21", false, null, 5.0))), List.of(holiday("2026-10-21")), true);
+
+        assertEquals(5.0, result.get("statutoryOtHours"));
+        assertEquals(400.0, result.get("statutoryOtRate"));
+        assertEquals(2000.0, result.get("statutoryOtAmount"));
+        assertEquals(2000.0, result.get("statutoryHolidayAmount"));
+        assertEquals(2.0, result.get("overtimeHours"));      // only the normal day's OT
+        assertEquals(675.0, result.get("overtimeAmount"));   // 2 x 1,800 / 8 x 1.5
+        assertEquals(3600.0 + 675.0 + 2000.0, result.get("grossSalary"));
+        assertEquals(3600.0 * 0.08, (Double) result.get("epf8"), 0.001);  // OT is not in the EPF amount
+    }
+
+    @Test
+    void holidayOtStaysNormalOtWhenNotEligibleOrNoHoliday() {
+        List<Attendance> rows = List.of(row("2026-10-12", false, null, 2.0), row("2026-10-21", false, null, 5.0));
+
+        Map<String, Object> notEligible = summary(1800.0, null, new ArrayList<>(rows), List.of(holiday("2026-10-21")), false);
+        Map<String, Object> noHoliday = summary(1800.0, null, new ArrayList<>(rows), List.of(), true);
+
+        for (Map<String, Object> result : List.of(notEligible, noHoliday)) {
+            assertEquals(0.0, result.get("statutoryOtAmount"));
+            assertEquals(7.0, result.get("overtimeHours"));
+            assertEquals(2362.5, result.get("overtimeAmount"));   // 7 x 337.50
+        }
+    }
+
+    @Test
+    void nightShiftDaysAreCountedForTheNightLineAndTotalsStayTheSame() {
+        Attendance night = row("2026-10-13", false, null, 0);
+        night.setNightShift("Y");
+        Attendance poyaNight = row("2026-10-04", true, 2250.0, 0);
+        poyaNight.setNightShift("Y");
+        Map<String, Object> result = summary(1500.0, null, new ArrayList<>(List.of(row("2026-10-12", false, null, 0), night, poyaNight)));
+
+        assertEquals(2.0, result.get("normalDays"));
+        assertEquals(1.0, result.get("nightNormalDays"));   // the Poya night stays on the Poya line
+        assertEquals(2.0, result.get("nightDays"));
+        assertEquals(3000.0, result.get("normalAmount"));
+        assertEquals(5250.0, result.get("grossSalary"));   // 2 x 1,500 + 2,250, unchanged
     }
 }

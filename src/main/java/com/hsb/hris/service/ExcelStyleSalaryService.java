@@ -375,6 +375,14 @@ public class ExcelStyleSalaryService {
                 }
             }
 
+            // OT on a statutory holiday is paid as statutory holiday pay at (Daily Rate / 9) x 2, not as normal OT
+            double statutoryOtHours = emp == null ? 0.0
+                    : Math.min(otHours, StatutoryHolidayService.holidayOtHours(emp, monthHolidays, attList));
+            if (statutoryOtHours > 0) {
+                otHours -= statutoryOtHours;
+                statutoryPay = round2(statutoryPay + round2(statutoryOtHours * StatutoryHolidayService.holidayOtRate(dailyRate)));
+            }
+
             SalaryCalculation calc = calculateRow(
                     epf, empName, plant, yr, mo,
                     dailyRate, shift1Days, shift2Days, poyaDays, 0.0, otHours,

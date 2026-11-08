@@ -125,6 +125,7 @@ public class MonthlySummaryController {
         double attPoyaDays = 0;
         double attSpecialDays = 0;
         double attNightDays = 0;
+        double attNightNormalDays = 0;
         double attOtHours = 0;
         double attDayAllowance = 0;
         double attNightAllowance = 0;
@@ -147,6 +148,8 @@ public class MonthlySummaryController {
 
             if ("Y".equalsIgnoreCase(a.getNightShift()) || "Y".equalsIgnoreCase(a.getFullNight())) {
                 attNightDays += dayWeight;
+                // Night shift days paid as normal days; the pay sheet shows them on the Night line
+                if (!"Y".equalsIgnoreCase(a.getSaturdayPoya())) attNightNormalDays += dayWeight;
                 if (a.getNightAllowance() != null && a.getNightAllowance() > 0) {
                     attNightAllowance += a.getNightAllowance();
                 }
@@ -216,6 +219,13 @@ public class MonthlySummaryController {
             }
         }
 
+        // OT on a statutory holiday is paid on the statutory holiday line, not as normal OT
+        double statutoryOtHours = monthlyAttList == null || monthlyAttList.isEmpty() ? 0.0
+                : Math.min(otHours, StatutoryHolidayService.holidayOtHours(employee, statutoryHolidays.holidaysForMonth(yr, mo), monthlyAttList));
+        double statutoryOtRate = StatutoryHolidayService.holidayOtRate(normalRate);
+        double statutoryOtAmount = Math.round(statutoryOtHours * statutoryOtRate * 100.0) / 100.0;
+        otHours = otHours - statutoryOtHours;
+
         // For a normal 8-hour working day, OT is paid at 1.5 times the hourly rate:
         double hourlyRate = normalRate > 0 ? (normalRate / 8.0) : 0;
         double otRate1_5 = Math.round(hourlyRate * 1.5 * 100.0) / 100.0;
@@ -228,7 +238,7 @@ public class MonthlySummaryController {
         // Statutory holidays: per holiday, eligible employees get the Working or Not Working value
         StatutoryHolidayService.EmployeePay statutoryPay = statutoryHolidays.computeForEmployee(employee, yr, mo, monthlyAttList);
         double statutoryHolidayCount = statutoryPay.count;
-        double statutoryHolidayAmount = statutoryPay.total;
+        double statutoryHolidayAmount = Math.round((statutoryPay.total + statutoryOtAmount) * 100.0) / 100.0;
 
         attendanceData.put("workingDays", workingDays);
         attendanceData.put("normalDays", normalDays);
@@ -250,6 +260,9 @@ public class MonthlySummaryController {
         attendanceData.put("statutoryHolidayCount", statutoryHolidayCount);
         attendanceData.put("statutoryHolidayAmount", statutoryHolidayAmount);
         attendanceData.put("statutoryHolidays", statutoryPay.lines);
+        attendanceData.put("statutoryOtHours", statutoryOtHours);
+        attendanceData.put("statutoryOtRate", statutoryOtRate);
+        attendanceData.put("statutoryOtAmount", statutoryOtAmount);
         result.put("attendance", attendanceData);
 
         // Pay Advice components (Generated_Pay_Advice_v2 layout)
@@ -306,12 +319,16 @@ public class MonthlySummaryController {
         result.put("nightRate", nightRate);
         result.put("nightAmount", nightAmount);
         result.put("nightAllowance", nightAmount);
+        result.put("nightNormalDays", Math.min(attNightNormalDays, normalDays));
         result.put("poyaDayExtra", poyaAmount);
         result.put("overtimeHours", otHours);
         result.put("overtimeRate", otRate1_5);
         result.put("overtimeAmount", otAmount);
         result.put("dayAllowance", dayAllowance);
         result.put("statutoryHolidayAmount", statutoryHolidayAmount);
+        result.put("statutoryOtHours", statutoryOtHours);
+        result.put("statutoryOtRate", statutoryOtRate);
+        result.put("statutoryOtAmount", statutoryOtAmount);
         result.put("totalAdditions", totalAdditions);
         result.put("grossSalary", grossSalary);
 

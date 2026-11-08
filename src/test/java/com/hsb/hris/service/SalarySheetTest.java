@@ -301,4 +301,39 @@ class SalarySheetTest {
         assertEquals(0.0, sheet.get(1).otherAdditions);
         assertEquals(840.0, sheet.get(0).epfBase);  // not part of the EPF amount
     }
+    @Test
+    void otOnAStatutoryHolidayIsPaidAtDailyRateOverNineTimesTwo() {
+        worked("P01", 24, 2, false, false, null, 2.0);   // 24th normal day, 25th the holiday
+        StatutoryHoliday holiday = new StatutoryHoliday();
+        holiday.setHolidayDate(LocalDate.of(2024, 12, 25));
+        when(statutory.holidaysForMonth("2024", "12")).thenReturn(List.of(holiday));
+        StatutoryHolidayService.EmployeePay pay = new StatutoryHolidayService.EmployeePay();
+        pay.total = 3000;
+        when(statutory.computeForEmployee(any(Employee.class), anyList(), anyMap(), anyList())).thenReturn(pay);
+
+        SalarySheetRow r = sheet().get(0);
+
+        assertEquals(2.0, r.otHours);                   // only the normal day's OT
+        assertEquals(315.0, r.otTotal);                 // 2 x 840 / 8 x 1.5
+        assertEquals(3373.34, r.statutoryHolidayPay);   // 3,000 + 2 x (93.33 x 2 = 186.67)
+        assertEquals(3373.34, r.otherAdditions);
+        assertEquals(1680.0, r.epfBase);
+    }
+
+    @Test
+    void holidayOtIsNormalOtWhenNotEligible() {
+        Employee employee = employees.findAll().get(0);
+        employee.setStatutoryHolidayEligible(false);
+        worked("P01", 25, 1, false, false, null, 2.0);
+        StatutoryHoliday holiday = new StatutoryHoliday();
+        holiday.setHolidayDate(LocalDate.of(2024, 12, 25));
+        when(statutory.holidaysForMonth("2024", "12")).thenReturn(List.of(holiday));
+        when(statutory.computeForEmployee(any(Employee.class), anyList(), anyMap(), anyList())).thenReturn(new StatutoryHolidayService.EmployeePay());
+
+        SalarySheetRow r = sheet().get(0);
+
+        assertEquals(2.0, r.otHours);
+        assertEquals(315.0, r.otTotal);
+        assertEquals(0.0, r.statutoryHolidayPay);
+    }
 }
