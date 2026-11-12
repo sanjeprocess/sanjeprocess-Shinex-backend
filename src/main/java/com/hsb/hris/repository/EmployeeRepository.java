@@ -27,6 +27,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, String> {
     @Query(value = "select e from Employee e where trim(e.epfNo) = :epfNo")
     Optional<Employee> findByTrimmedEpfNo(@Param("epfNo") String epfNo);
 
+    /** Only the fields a bulk attendance save needs: EPF, first and last name, plant, section, business center. */
+    @Query("SELECT e.epfNo, e.firstName, e.lastName, e.plantCode, e.sectionCode, e.businessCenter FROM Employee e")
+    List<Object[]> findAttendanceLookup();
+
     @Query("SELECT e.epfNo FROM Employee e")
     List<String> findAllEpfNos();
 }

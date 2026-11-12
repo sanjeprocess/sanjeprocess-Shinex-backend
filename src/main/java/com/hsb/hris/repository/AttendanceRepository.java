@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -14,6 +16,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Attendan
     List<Attendance> findByBusinessCenterAndAttYearAndAttMonth(String businessCenter, String year, String month);
     List<Attendance> findByEpfNoAndAttYearAndAttMonth(String epfNo, String year, String month);
     List<Attendance> findByAttYearAndAttMonth(String year, String month);
+
+    /** Saved rows among a bulk upload's employees and dates, found in one query. */
+    List<Attendance> findByAttYearAndAttMonthAndEpfNoInAndDayInIn(String year, String month, Collection<String> epfNos, Collection<LocalDate> days);
 
     @Query("SELECT DISTINCT a FROM Attendance a WHERE " +
            "UPPER(TRIM(a.businessCenter)) = UPPER(TRIM(:bc)) OR " +

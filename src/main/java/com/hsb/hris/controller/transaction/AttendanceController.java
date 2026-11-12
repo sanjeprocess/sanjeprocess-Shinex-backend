@@ -12,7 +12,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,14 +30,19 @@ public class AttendanceController {
     private final AttendanceRepository attendanceRepository;
     private final com.hsb.hris.repository.EmployeeRepository employeeRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final TransactionTemplate transactionTemplate;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public AttendanceController(AttendanceService service, AttendanceRepository attendanceRepository,
                                 com.hsb.hris.repository.EmployeeRepository employeeRepository,
-                                JdbcTemplate jdbcTemplate) {
+                                JdbcTemplate jdbcTemplate, PlatformTransactionManager transactionManager) {
         this.service = service;
         this.attendanceRepository = attendanceRepository;
         this.employeeRepository = employeeRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @GetMapping
@@ -195,7 +204,19 @@ public class AttendanceController {
         // Cache employee records for validation and auto-populating plant, business center, etc.
         Map<String, com.hsb.hris.entity.Employee> empMap = new java.util.HashMap<>();
         Map<String, String> empNameMap = new java.util.HashMap<>();
-        for (com.hsb.hris.entity.Employee emp : employeeRepository.findAll()) {
+        // Only the six fields used below are read, not the whole employee master
+        List<com.hsb.hris.entity.Employee> employees = new java.util.ArrayList<>();
+        for (Object[] f : employeeRepository.findAttendanceLookup()) {
+            com.hsb.hris.entity.Employee e = new com.hsb.hris.entity.Employee();
+            e.setEpfNo((String) f[0]);
+            e.setFirstName((String) f[1]);
+            e.setLastName((String) f[2]);
+            e.setPlantCode((String) f[3]);
+            e.setSectionCode((String) f[4]);
+            e.setBusinessCenter((String) f[5]);
+            employees.add(e);
+        }
+        for (com.hsb.hris.entity.Employee emp : employees) {
             if (emp.getEpfNo() != null) {
                 String epfUpper = emp.getEpfNo().trim().toUpperCase();
                 String epfStripped = epfUpper.replaceFirst("^0+(?!$)", "");
@@ -296,6 +317,22 @@ public class AttendanceController {
             java.util.Set<String> seenKeys = new java.util.HashSet<>();
             List<String> rowErrors = new java.util.ArrayList<>();
 
+            // Rows of this upload already saved, found in one query instead of one per row
+            Map<String, Attendance> existingRows = new java.util.HashMap<>();
+            java.util.Set<String> groupEpfs = new java.util.HashSet<>();
+            java.util.Set<LocalDate> groupDays = new java.util.HashSet<>();
+            for (Attendance a : groupRows) {
+                if (a.getEpfNo() != null && !a.getEpfNo().isBlank() && a.getDayIn() != null) {
+                    groupEpfs.add(a.getEpfNo().trim());
+                    groupDays.add(a.getDayIn());
+                }
+            }
+            if (!groupEpfs.isEmpty() && !yr.isEmpty() && !mo.isEmpty()) {
+                for (Attendance saved : attendanceRepository.findByAttYearAndAttMonthAndEpfNoInAndDayInIn(yr, mo, groupEpfs, groupDays)) {
+                    existingRows.put(rowKey(saved.getAttYear(), saved.getAttMonth(), saved.getEpfNo(), saved.getDayIn()), saved);
+                }
+            }
+
             for (Attendance a : groupRows) {
                 if (a.getEpfNo() != null) distinctEpfs.add(a.getEpfNo().trim().toUpperCase());
                 String epfNo = a.getEpfNo() == null ? "" : a.getEpfNo().trim();
@@ -335,10 +372,7 @@ public class AttendanceController {
                     continue;
                 }
                 try {
-                    com.hsb.hris.entity.id.AttendanceId id = new com.hsb.hris.entity.id.AttendanceId(
-                        a.getAttYear().trim(), a.getAttMonth().trim(), epfNo, a.getDayIn()
-                    );
-                    Attendance existing = attendanceRepository.findById(id).orElse(null);
+                    Attendance existing = existingRows.get(rowKey(a.getAttYear(), a.getAttMonth(), epfNo, a.getDayIn()));
                     if (existing != null) {
                         // Update existing row
                         existing.setPlantCode(a.getPlantCode());
@@ -380,8 +414,11 @@ public class AttendanceController {
                         allSaved.add(saved);
                         updated++;
                     } else {
-                        // Insert new row
-                        Attendance saved = attendanceRepository.save(a);
+                        // Insert new row: a plain insert, without first looking the row up again
+                        Attendance saved = transactionTemplate.execute(status -> {
+                            entityManager.persist(a);
+                            return a;
+                        });
                         allSaved.add(saved);
                         inserted++;
                     }
@@ -429,6 +466,11 @@ public class AttendanceController {
         response.put("records", allSaved);
 
         return ResponseEntity.ok(response);
+    }
+
+    private static String rowKey(String year, String month, String epfNo, LocalDate dayIn) {
+        return (year == null ? "" : year.trim()) + "|" + (month == null ? "" : month.trim()) + "|"
+                + (epfNo == null ? "" : epfNo.trim().toUpperCase()) + "|" + dayIn;
     }
 
     @PutMapping("/plant-range")
